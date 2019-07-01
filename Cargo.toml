@@ -5,3 +5,6 @@ authors = ["Mark LeMoine <thatsgobbles@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+
+[dev-dependencies]
+assert_approx_eq = "1.1.0"

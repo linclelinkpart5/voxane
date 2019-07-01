@@ -1,6 +1,6 @@
 pub mod partition;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     InvalidNumBands,
     InvalidBaseFrequency,
