@@ -3,16 +3,18 @@ pub mod partition;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
     InvalidNumBands,
-    InvalidBaseFrequency,
-    InvalidSamplingFrequency,
+    InvalidLowerCutoff,
+    InvalidUpperCutoff,
+    InvalidSamplingRate,
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
             Error::InvalidNumBands => write!(f, "number of bands must be greater than zero"),
-            Error::InvalidBaseFrequency => write!(f, "base frequency must be greater than zero and less than half of sampling frequency"),
-            Error::InvalidSamplingFrequency => write!(f, "sampling frequency must be greater than zero"),
+            Error::InvalidLowerCutoff => write!(f, "lower cutoff must be greater than zero and less than upper cutoff"),
+            Error::InvalidUpperCutoff => write!(f, "lower cutoff must be greater than zero and greater than lower cutoff"),
+            Error::InvalidSamplingRate => write!(f, "sampling rate must be greater than zero"),
         }
     }
 }

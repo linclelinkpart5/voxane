@@ -6,38 +6,43 @@ pub struct BandPartitions(Vec<(f32, f32)>);
 
 impl BandPartitions {
     // Inspired by https://stackoverflow.com/a/10462090/388739
-    pub fn new(sampling_freq: f32, base_freq: f32, num_bands: u16) -> Result<Self, Error> {
-        if !(base_freq > 0.0) { Err(Error::InvalidBaseFrequency)? }
-        if !(base_freq < sampling_freq / 2.0) { Err(Error::InvalidBaseFrequency)? }
-        if !(sampling_freq > 0.0) { Err(Error::InvalidSamplingFrequency)? }
+    pub fn new(lower_cutoff_freq: f32, upper_cutoff_freq: f32, num_bands: u16) -> Result<Self, Error> {
+        if !(upper_cutoff_freq > 0.0) { Err(Error::InvalidUpperCutoff)? }
+        if !(lower_cutoff_freq > 0.0) { Err(Error::InvalidLowerCutoff)? }
+        if !(lower_cutoff_freq < upper_cutoff_freq) { Err(Error::InvalidUpperCutoff)? }
 
-        let octave_factor = num_bands as f32 / ((sampling_freq / base_freq).log2() - 1.0);
+        let octave_factor = num_bands as f32 / (upper_cutoff_freq / lower_cutoff_freq).log2();
         let exp = 1.0 / octave_factor;
-
-        let factor = 2.0f32.powf(-exp);
+        let factor = 2.0f32.powf(exp);
 
         let mut partitions = Vec::with_capacity(num_bands as usize);
 
-        let mut curr_upper_limit = sampling_freq / 2.0;
+        let mut curr_lower_limit = lower_cutoff_freq;
 
         for i in 1..=num_bands {
-            let curr_lower_limit =
-                if i == num_bands && base_freq < curr_upper_limit { base_freq }
-                else { curr_upper_limit * factor }
+            let curr_upper_limit =
+                if i == num_bands && upper_cutoff_freq > curr_lower_limit { upper_cutoff_freq }
+                else { curr_lower_limit * factor }
             ;
 
             partitions.push((curr_lower_limit, curr_upper_limit));
 
-            curr_upper_limit = curr_lower_limit;
+            curr_lower_limit = curr_upper_limit;
         }
-
-        partitions.reverse();
 
         Ok(Self(partitions))
     }
 
     pub fn num_bands(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn global_lower_cutoff(&self) -> Option<f32> {
+        self.0.first().map(|(f, _)| *f)
+    }
+
+    pub fn global_upper_cutoff(&self) -> Option<f32> {
+        self.0.last().map(|(_, f)| *f)
     }
 
     pub fn locate(&self, target_freq: f32) -> Option<usize> {
@@ -63,24 +68,24 @@ mod tests {
     #[test]
     fn test_new() -> Result<(), Error> {
         let expected: Vec<(f32, f32)> = vec![
-            (10.0, 16.179422),
-            (16.179422, 26.177372),
-            (26.177372, 42.353477),
-            (42.353477, 68.52548),
-            (68.52548, 110.87028),
-            (110.87028, 179.38171),
-            (179.38171, 290.22928),
-            (290.22928, 469.57425),
-            (469.57425, 759.7441),
-            (759.7441, 1229.2222),
-            (1229.2222, 1988.8105),
-            (1988.8105, 3217.7808),
-            (3217.7808, 5206.1836),
-            (5206.1836, 8423.305),
-            (8423.305, 13628.421),
-            (13628.421, 22050.0),
+            (10.0, 16.179424),
+            (16.179424, 26.177376),
+            (26.177376, 42.353485),
+            (42.353485, 68.5255),
+            (68.5255, 110.8703),
+            (110.8703, 179.38176),
+            (179.38176, 290.22934),
+            (290.22934, 469.57434),
+            (469.57434, 759.7442),
+            (759.7442, 1229.2223),
+            (1229.2223, 1988.8108),
+            (1988.8108, 3217.7813),
+            (3217.7813, 5206.1846),
+            (5206.1846, 8423.307),
+            (8423.307, 13628.425),
+            (13628.425, 22050.0),
         ];
-        let produced = BandPartitions::new(44100.0, 10.0, 16)?;
+        let produced = BandPartitions::new(10.0, 22050.0, 16)?;
 
         assert_eq!(expected.len(), produced.num_bands());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -89,16 +94,16 @@ mod tests {
         }
 
         let expected: Vec<(f32, f32)> = vec![
-            (20.0, 48.52076),
-            (48.52076, 117.71322),
-            (117.71322, 285.57678),
-            (285.57678, 692.82025),
-            (692.82025, 1680.8085),
-            (1680.8085, 4077.7058),
-            (4077.7058, 9892.671),
-            (9892.671, 24000.0),
+            (20.0, 48.520767),
+            (48.520767, 117.71324),
+            (117.71324, 285.57684),
+            (285.57684, 692.8204),
+            (692.8204, 1680.8087),
+            (1680.8087, 4077.7063),
+            (4077.7063, 9892.672),
+            (9892.672, 24000.0),
         ];
-        let produced = BandPartitions::new(48000.0, 20.0, 8)?;
+        let produced = BandPartitions::new(20.0, 24000.0, 8)?;
 
         assert_eq!(expected.len(), produced.num_bands());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -106,7 +111,7 @@ mod tests {
             assert_approx_eq!(e.1, p.1);
         }
 
-        let produced = BandPartitions::new(44100.0, 20.0, 0)?;
+        let produced = BandPartitions::new(20.0, 44100.0, 0)?;
         assert_eq!(0, produced.num_bands());
 
         Ok(())
@@ -114,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_locate() -> Result<(), Error> {
-        let partitions = BandPartitions::new(44100.0, 10.0, 16)?;
+        let partitions = BandPartitions::new(10.0, 22050.0, 16)?;
 
         let inputs_and_expected = vec![
             (22049.9, Some(15)),
