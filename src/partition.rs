@@ -7,7 +7,6 @@ pub struct BandPartitions(Vec<(f32, f32)>);
 impl BandPartitions {
     // Inspired by https://stackoverflow.com/a/10462090/388739
     pub fn new(sampling_freq: f32, base_freq: f32, num_bands: u16) -> Result<Self, Error> {
-        if num_bands == 0 { Err(Error::InvalidNumBands)? }
         if !(base_freq > 0.0) { Err(Error::InvalidBaseFrequency)? }
         if !(base_freq < sampling_freq / 2.0) { Err(Error::InvalidBaseFrequency)? }
         if !(sampling_freq > 0.0) { Err(Error::InvalidSamplingFrequency)? }
@@ -45,9 +44,9 @@ impl BandPartitions {
         self.0.binary_search_by(|(lo, hi)| {
             match (lo <= &target_freq, &target_freq < hi) {
                 (true, true) => Ordering::Equal,
-                (true, false) => Ordering::Greater,
-                (false, false) => Ordering::Less,
-                (false, true) => unreachable!("invalid band partition created"),
+                (true, false) => Ordering::Less,
+                (false, true) => Ordering::Greater,
+                (false, false) => unreachable!("invalid band partition created"),
             }
         }).ok()
     }
@@ -105,6 +104,32 @@ mod tests {
         for (e, p) in expected.into_iter().zip(produced.0) {
             assert_approx_eq!(e.0, p.0);
             assert_approx_eq!(e.1, p.1);
+        }
+
+        let produced = BandPartitions::new(44100.0, 20.0, 0)?;
+        assert_eq!(0, produced.num_bands());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_locate() -> Result<(), Error> {
+        let partitions = BandPartitions::new(44100.0, 10.0, 16)?;
+
+        let inputs_and_expected = vec![
+            (22049.9, Some(15)),
+            (22050.0, None),
+            (0.0, None),
+            (9.9, None),
+            (10.0, Some(0)),
+            (500.0, Some(8)),
+            (759.0, Some(8)),
+            (760.0, Some(9)),
+        ];
+
+        for (input, expected) in inputs_and_expected {
+            let produced = partitions.locate(input);
+            assert_eq!(expected, produced);
         }
 
         Ok(())
