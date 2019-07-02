@@ -9,7 +9,7 @@ impl BandPartitions {
     pub fn new(lower_cutoff_freq: f32, upper_cutoff_freq: f32, num_bands: u16) -> Result<Self, Error> {
         if !(upper_cutoff_freq > 0.0) { Err(Error::InvalidUpperCutoff)? }
         if !(lower_cutoff_freq > 0.0) { Err(Error::InvalidLowerCutoff)? }
-        if !(lower_cutoff_freq < upper_cutoff_freq) { Err(Error::InvalidUpperCutoff)? }
+        if !(lower_cutoff_freq < upper_cutoff_freq) { Err(Error::OutOfOrderCutoffs)? }
 
         let octave_factor = num_bands as f32 / (upper_cutoff_freq / lower_cutoff_freq).log2();
         let exp = 1.0 / octave_factor;
@@ -51,7 +51,7 @@ impl BandPartitions {
                 (true, true) => Ordering::Equal,
                 (true, false) => Ordering::Less,
                 (false, true) => Ordering::Greater,
-                (false, false) => unreachable!("invalid band partition created"),
+                (false, false) => unreachable!("invalid/out-of-order band partition created"),
             }
         }).ok()
     }
