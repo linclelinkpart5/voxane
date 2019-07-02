@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use super::Error;
+use crate::Error;
 
 pub struct BandPartitions(Vec<(f32, f32)>);
 

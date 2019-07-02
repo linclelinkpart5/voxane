@@ -1,4 +1,5 @@
 pub mod partition;
+pub mod assign;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
