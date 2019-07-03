@@ -19,7 +19,7 @@ impl Assigner {
         Ok(Self{ partitions, sampling_freq, })
     }
 
-    pub fn assign_fft(&self, fft_output: &[Complex<f32>]) {
+    pub fn assign_fft(&self, fft_output: &[Complex<f32>]) -> Vec<f32> {
         assert!(fft_output.len() > 0);
 
         // Frequency resolution of the FFT (a.k.a. the frequency bin size)
@@ -36,11 +36,26 @@ impl Assigner {
             let freq_bin = freq_res * i as f32;
 
             // Where does this frequency bin fall in the band partitions?
-            if let Some((band_index, lo, hi)) = self.partitions.locate(freq_bin) {
-                let factor = (freq_bin - lo) / (hi - lo);
-
-                assignments.get_mut(band_index).map(|(value, count)| { *value += factor; *count += 1; });
+            if let Some(band_index) = self.partitions.locate(freq_bin) {
+                if let Some((value, count)) = assignments.get_mut(band_index) {
+                    *value += freq_bin;
+                    *count += 1;
+                }
             }
         }
+
+        let band_values =
+            assignments
+            .into_iter()
+            .map(|(value, count)| {
+                if count > 0 { value / count as f32 }
+                else { 0.0 }
+            })
+            .collect::<Vec<_>>()
+        ;
+
+        assert_eq!(self.partitions.num_bands(), band_values.len());
+
+        band_values
     }
 }
