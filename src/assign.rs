@@ -38,7 +38,7 @@ impl Assigner {
             // Where does this frequency bin fall in the band partitions?
             if let Some(band_index) = self.partitions.locate(freq_bin) {
                 if let Some((value, count)) = assignments.get_mut(band_index) {
-                    *value += freq_bin;
+                    *value += fft_output[i].norm();
                     *count += 1;
                 }
             }
