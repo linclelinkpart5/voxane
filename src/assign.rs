@@ -104,5 +104,10 @@ mod tests {
         let band_values = assigner.assign_fft(&fft_output);
 
         println!("{:?}", band_values);
+
+        let sum: f32 = (&band_values).into_iter().sum();
+
+        let normalized = band_values.into_iter().map(|x| x / sum).collect::<Vec<_>>();
+        println!("{:?}", normalized);
     }
 }
