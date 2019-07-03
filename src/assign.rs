@@ -38,6 +38,7 @@ impl Assigner {
             // Where does this frequency bin fall in the band partitions?
             if let Some(band_index) = self.partitions.locate(freq_bin) {
                 if let Some((value, count)) = assignments.get_mut(band_index) {
+                    println!("(i, f_bin, b_idx) = ({}, {}, {})", i, freq_bin, band_index);
                     *value += fft_output[i].norm();
                     *count += 1;
                 }
@@ -57,5 +58,51 @@ impl Assigner {
         assert_eq!(self.partitions.num_bands(), band_values.len());
 
         band_values
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Assigner;
+
+    use hound::WavReader;
+    use rustfft::FFTplanner;
+    use rustfft::num_complex::Complex;
+
+    use crate::Error;
+
+    use assert_approx_eq::assert_approx_eq;
+
+    const PATH: &'static str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/wav/sin_440hz_44100hz_samp.wav",
+    );
+
+    fn get_fft() -> Vec<Complex<f32>> {
+        let mut reader = WavReader::open(PATH).unwrap();
+        let num_samples = reader.len() as usize;
+
+        let mut planner = FFTplanner::new(false);
+        let fft = planner.plan_fft(num_samples);
+
+        let mut signal = reader.samples::<i32>()
+            .map(|x| Complex::from(x.unwrap() as f32))
+            .collect::<Vec<_>>();
+
+        let mut spectrum = signal.clone();
+        fft.process(&mut signal[..], &mut spectrum[..]);
+
+        spectrum
+    }
+
+    #[test]
+    fn test_assign_fft() {
+        let fft_output = get_fft();
+
+        let assigner = Assigner::new(20.0, 10000.0, 16, 44100.0).unwrap();
+
+        let band_values = assigner.assign_fft(&fft_output);
+
+        println!("{:?}", band_values);
     }
 }

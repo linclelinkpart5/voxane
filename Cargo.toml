@@ -9,3 +9,4 @@ rustfft = "3"
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
+hound = "3.4.0"
