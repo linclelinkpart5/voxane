@@ -45,7 +45,7 @@ impl BandPartitions {
         self.0.last().map(|(_, f)| *f)
     }
 
-    pub fn locate(&self, target_freq: f32) -> Option<usize> {
+    pub fn locate(&self, target_freq: f32) -> Option<(usize, f32, f32)> {
         self.0.binary_search_by(|(lo, hi)| {
             match (lo <= &target_freq, &target_freq < hi) {
                 (true, true) => Ordering::Equal,
@@ -53,7 +53,7 @@ impl BandPartitions {
                 (false, true) => Ordering::Greater,
                 (false, false) => unreachable!("invalid/out-of-order band partition created"),
             }
-        }).ok()
+        }).ok().map(|i| (i, self.0[i].0, self.0[i].1))
     }
 }
 
@@ -122,14 +122,14 @@ mod tests {
         let partitions = BandPartitions::new(10.0, 22050.0, 16)?;
 
         let inputs_and_expected = vec![
-            (22049.9, Some(15)),
+            (22049.9, Some((15, 13628.425, 22050.0))),
             (22050.0, None),
             (0.0, None),
             (9.9, None),
-            (10.0, Some(0)),
-            (500.0, Some(8)),
-            (759.0, Some(8)),
-            (760.0, Some(9)),
+            (10.0, Some((0, 10.0, 16.179424))),
+            (500.0, Some((8, 469.57434, 759.7442))),
+            (759.0, Some((8, 469.57434, 759.7442))),
+            (760.0, Some((9, 759.7442, 1229.2223))),
         ];
 
         for (input, expected) in inputs_and_expected {
