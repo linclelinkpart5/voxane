@@ -38,7 +38,7 @@ impl Assigner {
             // Where does this frequency bin fall in the band partitions?
             if let Some(band_index) = self.partitions.locate(freq_bin) {
                 if let Some((value, count)) = assignments.get_mut(band_index) {
-                    println!("(i, f_bin, b_idx) = ({}, {}, {})", i, freq_bin, band_index);
+                    // println!("(i, f_bin, b_idx) = ({}, {}, {})", i, freq_bin, band_index);
                     *value += fft_output[i].norm();
                     *count += 1;
                 }
@@ -57,7 +57,10 @@ impl Assigner {
 
         assert_eq!(self.partitions.num_bands(), band_values.len());
 
-        band_values
+        let total_sum = (&band_values).into_iter().sum::<f32>();
+
+        if total_sum > 0.0 { band_values.into_iter().map(|x| x / total_sum).collect() }
+        else { band_values }
     }
 }
 
@@ -103,11 +106,6 @@ mod tests {
 
         let band_values = assigner.assign_fft(&fft_output);
 
-        println!("{:?}", band_values);
-
-        let sum: f32 = (&band_values).into_iter().sum();
-
-        let normalized = band_values.into_iter().map(|x| x / sum).collect::<Vec<_>>();
-        println!("{:?}", normalized);
+        assert_approx_eq!(1.0f32, (&band_values).into_iter().sum::<f32>());
     }
 }
