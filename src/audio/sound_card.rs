@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering as AtomicOrdering;
 
@@ -24,10 +25,10 @@ impl SoundCard {
         let device = host.default_input_device().expect("failed to get default input device");
         let format = device.default_input_format().expect("failed to get default input format");
         let stream_id = event_loop.build_input_stream(&device, &format).expect("failed to build input stream");
-        event_loop.play_stream(stream_id);
+        event_loop.play_stream(stream_id).expect("unable to play input stream");
 
         Self {
-            event_loop
+            event_loop,
         }
     }
 
@@ -40,7 +41,7 @@ impl SoundCard {
         let device = host.default_input_device().expect("failed to get default input device");
         let format = device.default_input_format().expect("failed to get default input format");
         let stream_id = event_loop.build_input_stream(&device, &format).expect("failed to build input stream");
-        event_loop.play_stream(stream_id);
+        event_loop.play_stream(stream_id).expect("unable to play input stream");
 
         // A flag to indicate that recording is in progress.
         println!("Begin recording...");
