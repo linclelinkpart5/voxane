@@ -1,6 +1,7 @@
 pub mod partition;
 pub mod assign;
 pub mod audio;
+pub mod fourier;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
