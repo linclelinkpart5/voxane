@@ -1,6 +1,11 @@
-pub type Sample = f32;
-pub type Frequency = f32;
-pub type SignalStrength = f32;
+use std::sync::Arc;
+
+use rustfft::FFT;
+use rustfft::FFTplanner;
+
+use crate::types::Sample;
+use crate::types::Frequency;
+use crate::types::SignalStrength;
 
 pub trait Storage: std::ops::Deref<Target = [SignalStrength]> {}
 
@@ -44,7 +49,6 @@ impl<S: Storage> Spectrum<S> {
 
 #[derive(Clone)]
 pub struct Analyzer {
-    length: usize,
     buckets: usize,
     window: Vec<Sample>,
     downsample: usize,
@@ -53,20 +57,18 @@ pub struct Analyzer {
     lowest: Frequency,
     highest: Frequency,
 
-    fft: std::sync::Arc<rustfft::FFT<Sample>>,
+    fft: Arc<FFT<Sample>>,
 
-    input: [Vec<rustfft::num_complex::Complex<Sample>>; 2],
-    output: Vec<rustfft::num_complex::Complex<Sample>>,
+    // input: [Vec<rustfft::num_complex::Complex<Sample>>; 2],
+    // output: Vec<rustfft::num_complex::Complex<Sample>>,
 
-    spectra: [Spectrum<Vec<SignalStrength>>; 2],
-    average: Spectrum<Vec<SignalStrength>>,
+    // spectra: [Spectrum<Vec<SignalStrength>>; 2],
+    // average: Spectrum<Vec<SignalStrength>>,
 }
 
 impl Analyzer {
     pub fn new(length: usize, window: Vec<f32>, downsample: usize, rate: usize) -> Self {
-        use rustfft::num_traits::Zero;
-
-        let fft = rustfft::FFTplanner::new(false).plan_fft(length);
+        let fft = FFTplanner::new(false).plan_fft(length);
         let buckets = length / 2;
 
         let downsampled_rate = rate as f32 / downsample as f32;
@@ -74,7 +76,6 @@ impl Analyzer {
         let highest = downsampled_rate / 2.0;
 
         Analyzer {
-            length,
             buckets,
             window,
             downsample,
@@ -85,14 +86,18 @@ impl Analyzer {
 
             fft,
 
-            input: [Vec::with_capacity(length), Vec::with_capacity(length)],
-            output: vec![rustfft::num_complex::Complex::zero(); length],
+            // input: [Vec::with_capacity(length), Vec::with_capacity(length)],
+            // output: vec![rustfft::num_complex::Complex::zero(); length],
 
-            spectra: [
-                Spectrum::new(vec![0.0; buckets], lowest, highest),
-                Spectrum::new(vec![0.0; buckets], lowest, highest),
-            ],
-            average: Spectrum::new(vec![0.0; buckets], lowest, highest),
+            // spectra: [
+            //     Spectrum::new(vec![0.0; buckets], lowest, highest),
+            //     Spectrum::new(vec![0.0; buckets], lowest, highest),
+            // ],
+            // average: Spectrum::new(vec![0.0; buckets], lowest, highest),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.fft.len()
     }
 }
