@@ -1,30 +1,31 @@
 use std::cmp::Ordering;
 
 use crate::Error;
+use crate::types::Frequency;
 
 #[derive(Clone)]
-pub struct Spectrum(Vec<(f32, f32)>);
+pub struct Spectrum(Vec<(Frequency, Frequency)>);
 
 impl Spectrum {
     // Inspired by https://stackoverflow.com/a/10462090/388739
-    pub fn new(lower_cutoff_freq: f32, upper_cutoff_freq: f32, num_bands: usize) -> Result<Self, Error> {
+    pub fn new(lower_cutoff: Frequency, upper_cutoff: Frequency, num_bands: usize) -> Result<Self, Error> {
         // Check invariants.
-        if !(upper_cutoff_freq > 0.0) { Err(Error::InvalidUpperCutoff)? }
-        if !(lower_cutoff_freq > 0.0) { Err(Error::InvalidLowerCutoff)? }
-        if !(lower_cutoff_freq < upper_cutoff_freq) { Err(Error::OutOfOrderCutoffs)? }
+        if !(upper_cutoff > 0.0) { Err(Error::InvalidUpperCutoff)? }
+        if !(lower_cutoff > 0.0) { Err(Error::InvalidLowerCutoff)? }
+        if !(lower_cutoff < upper_cutoff) { Err(Error::OutOfOrderCutoffs)? }
 
         // Space out logarithmically.
-        let octave_factor = num_bands as f32 / (upper_cutoff_freq / lower_cutoff_freq).log2();
+        let octave_factor = num_bands as f32 / (upper_cutoff / lower_cutoff).log2();
         let exp = 1.0 / octave_factor;
         let factor = 2.0f32.powf(exp);
 
         let mut partitions = Vec::with_capacity(num_bands as usize);
 
-        let mut curr_lower_limit = lower_cutoff_freq;
+        let mut curr_lower_limit = lower_cutoff;
 
         for i in 1..=num_bands {
             let curr_upper_limit =
-                if i == num_bands && upper_cutoff_freq > curr_lower_limit { upper_cutoff_freq }
+                if i == num_bands && upper_cutoff > curr_lower_limit { upper_cutoff }
                 else { curr_lower_limit * factor }
             ;
 
@@ -40,17 +41,17 @@ impl Spectrum {
         self.0.len()
     }
 
-    pub fn global_lower_cutoff(&self) -> Option<f32> {
+    pub fn lower_cutoff(&self) -> Option<Frequency> {
         self.0.first().map(|(f, _)| *f)
     }
 
-    pub fn global_upper_cutoff(&self) -> Option<f32> {
+    pub fn upper_cutoff(&self) -> Option<Frequency> {
         self.0.last().map(|(_, f)| *f)
     }
 
-    pub fn locate(&self, target_freq: f32) -> Option<usize> {
+    pub fn locate(&self, target: Frequency) -> Option<usize> {
         self.0.binary_search_by(|(lo, hi)| {
-            match (lo <= &target_freq, &target_freq < hi) {
+            match (lo <= &target, &target < hi) {
                 (true, true) => Ordering::Equal,
                 (true, false) => Ordering::Less,
                 (false, true) => Ordering::Greater,
