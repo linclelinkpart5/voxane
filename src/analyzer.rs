@@ -6,6 +6,7 @@ use rustfft::FFTplanner;
 use crate::types::Sample;
 use crate::types::Frequency;
 use crate::types::SignalStrength;
+use crate::spectrum::Spectrum;
 
 pub trait Storage: std::ops::Deref<Target = [SignalStrength]> {}
 
@@ -14,38 +15,6 @@ pub trait StorageMut: std::ops::Deref<Target = [SignalStrength]> + std::ops::Der
 impl<T> Storage for T where T: std::ops::Deref<Target = [SignalStrength]> {}
 
 impl<T> StorageMut for T where T: Storage + std::ops::DerefMut {}
-
-#[derive(Debug, Clone)]
-pub struct Spectrum<S: Storage> {
-    buckets: S,
-    width: Frequency,
-    lowest: Frequency,
-    highest: Frequency,
-}
-
-impl<S: Storage> Spectrum<S> {
-    /// Create a new spectrum
-    ///
-    /// Takes a storage buffer which is potentially prefilled with spectral data,
-    /// the frequency associated with the lowest bucket and the frequency associated
-    /// with the highest bucket.
-    ///
-    /// # Example
-    /// ```
-    /// # use vis_core::analyzer;
-    /// const N: usize = 128;
-    /// let spectrum = analyzer::Spectrum::new(vec![0.0; N], 440.0, 660.0);
-    /// ```
-    pub fn new(data: S, low: Frequency, high: Frequency) -> Spectrum<S> {
-        Spectrum {
-            width: (high - low) / (data.len() as Frequency - 1.0),
-            lowest: low,
-            highest: high,
-
-            buckets: data,
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Analyzer {
@@ -58,6 +27,9 @@ pub struct Analyzer {
     highest: Frequency,
 
     fft: Arc<FFT<Sample>>,
+
+    // Defines the target output spectrum.
+    spectrum: Spectrum,
 
     // input: [Vec<rustfft::num_complex::Complex<Sample>>; 2],
     // output: Vec<rustfft::num_complex::Complex<Sample>>,
@@ -75,6 +47,8 @@ impl Analyzer {
         let lowest = downsampled_rate / length as f32;
         let highest = downsampled_rate / 2.0;
 
+        let spectrum = Spectrum::new(lowest, highest, length).unwrap();
+
         Analyzer {
             buckets,
             window,
@@ -85,6 +59,8 @@ impl Analyzer {
             highest,
 
             fft,
+
+            spectrum,
 
             // input: [Vec::with_capacity(length), Vec::with_capacity(length)],
             // output: vec![rustfft::num_complex::Complex::zero(); length],

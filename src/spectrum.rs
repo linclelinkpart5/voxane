@@ -2,11 +2,12 @@ use std::cmp::Ordering;
 
 use crate::Error;
 
+#[derive(Clone)]
 pub struct Spectrum(Vec<(f32, f32)>);
 
 impl Spectrum {
     // Inspired by https://stackoverflow.com/a/10462090/388739
-    pub fn new(lower_cutoff_freq: f32, upper_cutoff_freq: f32, num_bands: u16) -> Result<Self, Error> {
+    pub fn new(lower_cutoff_freq: f32, upper_cutoff_freq: f32, num_bands: usize) -> Result<Self, Error> {
         // Check invariants.
         if !(upper_cutoff_freq > 0.0) { Err(Error::InvalidUpperCutoff)? }
         if !(lower_cutoff_freq > 0.0) { Err(Error::InvalidLowerCutoff)? }

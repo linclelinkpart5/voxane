@@ -1,4 +1,3 @@
-pub mod partition;
 pub mod assign;
 pub mod audio;
 pub mod types;
