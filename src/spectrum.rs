@@ -37,7 +37,7 @@ impl Spectrum {
         Ok(Self(partitions))
     }
 
-    pub fn num_bands(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0.len()
     }
 
@@ -58,6 +58,11 @@ impl Spectrum {
                 (false, false) => unreachable!("invalid/out-of-order band partition created"),
             }
         }).ok()
+    }
+
+    #[inline]
+    pub fn bands(&self) -> &[(Frequency, Frequency)] {
+        self.0.as_slice()
     }
 }
 
@@ -91,7 +96,7 @@ mod tests {
         ];
         let produced = Spectrum::new(10.0, 22050.0, 16)?;
 
-        assert_eq!(expected.len(), produced.num_bands());
+        assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
             assert_approx_eq!(e.0, p.0);
             assert_approx_eq!(e.1, p.1);
@@ -109,14 +114,14 @@ mod tests {
         ];
         let produced = Spectrum::new(20.0, 24000.0, 8)?;
 
-        assert_eq!(expected.len(), produced.num_bands());
+        assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
             assert_approx_eq!(e.0, p.0);
             assert_approx_eq!(e.1, p.1);
         }
 
         let produced = Spectrum::new(20.0, 44100.0, 0)?;
-        assert_eq!(0, produced.num_bands());
+        assert_eq!(0, produced.len());
 
         Ok(())
     }

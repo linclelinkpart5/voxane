@@ -30,7 +30,7 @@ impl Assigner {
         // The zero index is skipped, since the zero frequency does not apply here.
         let valid_fft_indices = 1..=(fft_output.len() / 2);
 
-        let mut assignments = vec![(0.0f32, 0); self.spectrum.num_bands()];
+        let mut assignments = vec![(0.0f32, 0); self.spectrum.len()];
 
         for i in valid_fft_indices {
             let freq_bin = freq_res * i as f32;
@@ -55,7 +55,7 @@ impl Assigner {
             .collect::<Vec<_>>()
         ;
 
-        assert_eq!(self.spectrum.num_bands(), band_values.len());
+        assert_eq!(self.spectrum.len(), band_values.len());
 
         let total_sum = (&band_values).into_iter().sum::<f32>();
 

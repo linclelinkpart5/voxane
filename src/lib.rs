@@ -4,6 +4,7 @@ pub mod types;
 pub mod spectrum;
 pub mod analyzer;
 pub mod window;
+pub mod wave;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -12,6 +13,7 @@ pub enum Error {
     InvalidUpperCutoff,
     OutOfOrderCutoffs,
     InvalidSamplingRate,
+    NotEnoughSamples,
 }
 
 impl std::fmt::Display for Error {
@@ -22,6 +24,7 @@ impl std::fmt::Display for Error {
             Error::InvalidUpperCutoff => write!(f, "upper cutoff must be greater than zero"),
             Error::OutOfOrderCutoffs => write!(f, "lower cutoff must be less than upper cutoff"),
             Error::InvalidSamplingRate => write!(f, "sampling rate must be greater than zero"),
+            Error::NotEnoughSamples => write!(f, "not enough samples to fill buffer"),
         }
     }
 }
