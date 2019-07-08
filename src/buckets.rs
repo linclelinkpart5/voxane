@@ -4,9 +4,9 @@ use crate::Error;
 use crate::types::Frequency;
 
 #[derive(Clone)]
-pub struct Spectrum(Vec<(Frequency, Frequency)>);
+pub struct Buckets(Vec<(Frequency, Frequency)>);
 
-impl Spectrum {
+impl Buckets {
     // Inspired by https://stackoverflow.com/a/10462090/388739
     pub fn new(lower_cutoff: Frequency, upper_cutoff: Frequency, num_bands: usize) -> Result<Self, Error> {
         // Check invariants.
@@ -68,9 +68,7 @@ impl Spectrum {
 
 #[cfg(test)]
 mod tests {
-    use super::Spectrum;
-
-    use crate::Error;
+    use super::*;
 
     use assert_approx_eq::assert_approx_eq;
 
@@ -94,7 +92,7 @@ mod tests {
             (8423.307, 13628.425),
             (13628.425, 22050.0),
         ];
-        let produced = Spectrum::new(10.0, 22050.0, 16)?;
+        let produced = Buckets::new(10.0, 22050.0, 16)?;
 
         assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -112,7 +110,7 @@ mod tests {
             (4077.7063, 9892.672),
             (9892.672, 24000.0),
         ];
-        let produced = Spectrum::new(20.0, 24000.0, 8)?;
+        let produced = Buckets::new(20.0, 24000.0, 8)?;
 
         assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -120,7 +118,7 @@ mod tests {
             assert_approx_eq!(e.1, p.1);
         }
 
-        let produced = Spectrum::new(20.0, 44100.0, 0)?;
+        let produced = Buckets::new(20.0, 44100.0, 0)?;
         assert_eq!(0, produced.len());
 
         Ok(())
@@ -128,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_locate() -> Result<(), Error> {
-        let partitions = Spectrum::new(10.0, 22050.0, 16)?;
+        let partitions = Buckets::new(10.0, 22050.0, 16)?;
 
         let inputs_and_expected = vec![
             (22049.9, Some(15)),

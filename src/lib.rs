@@ -1,7 +1,7 @@
 pub mod assign;
 pub mod audio;
 pub mod types;
-pub mod spectrum;
+pub mod buckets;
 pub mod analyzer;
 pub mod window;
 pub mod wave;

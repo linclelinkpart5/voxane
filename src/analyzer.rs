@@ -8,7 +8,7 @@ use crate::Error;
 use crate::types::Sample;
 use crate::types::Frequency;
 use crate::types::SignalStrength;
-use crate::spectrum::Spectrum;
+use crate::buckets::Buckets;
 use crate::window::Window;
 
 pub trait Storage: std::ops::Deref<Target = [SignalStrength]> {}
@@ -24,11 +24,14 @@ pub struct Analyzer {
     // Reusable FFT algorithm.
     fft: Arc<FFT<Sample>>,
 
+    // FFT frequency resolution, i.e. how far apart consecutive FFT bins are from each other.
+    fft_bin_size: Frequency,
+
     // FFT window type to use for smoothing.
     window: Window,
 
-    // Defines the target output spectrum.
-    spectrum: Spectrum,
+    // Defines the target output frequency buckets.
+    buckets: Buckets,
 
     // input: [Vec<rustfft::num_complex::Complex<Sample>>; 2],
     // output: Vec<rustfft::num_complex::Complex<Sample>>,
@@ -40,7 +43,7 @@ pub struct Analyzer {
 impl Analyzer {
     pub fn new(
         fft_buffer_len: usize,
-        spectrum_len: usize,
+        bucket_len: usize,
         window: Window,
         lower_cutoff: Frequency,
         upper_cutoff: Frequency,
@@ -52,14 +55,16 @@ impl Analyzer {
         // Force upper cutoff frequency to be no higher than half of the sampling rate.
         let upper_cutoff = upper_cutoff.min(sampling_rate / 2.0);
 
-        let spectrum = Spectrum::new(lower_cutoff, upper_cutoff, spectrum_len)?;
+        let buckets = Buckets::new(lower_cutoff, upper_cutoff, bucket_len)?;
 
         let fft = FFTplanner::new(false).plan_fft(fft_buffer_len);
+        let fft_bin_size = sampling_rate / fft_buffer_len as f32;
 
         Ok(Analyzer {
             fft,
+            fft_bin_size,
             window,
-            spectrum,
+            buckets,
         })
     }
 
@@ -69,23 +74,23 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn spectrum_len(&self) -> usize {
-        self.spectrum.len()
+    pub fn buckets_len(&self) -> usize {
+        self.buckets.len()
     }
 
     #[inline]
-    pub fn spectrum_bands(&self) -> &[(Frequency, Frequency)] {
-        self.spectrum.bands()
+    pub fn buckets(&self) -> &[(Frequency, Frequency)] {
+        self.buckets.bands()
     }
 
     #[inline]
     pub fn lower_cutoff(&self) -> Option<Frequency> {
-        self.spectrum.lower_cutoff()
+        self.buckets.lower_cutoff()
     }
 
     #[inline]
     pub fn upper_cutoff(&self) -> Option<Frequency> {
-        self.spectrum.upper_cutoff()
+        self.buckets.upper_cutoff()
     }
 
     /// Analyzes a slice of samples, representing a buffer of audio data for one channel.
@@ -121,9 +126,46 @@ impl Analyzer {
         Ok(res)
     }
 
-    pub fn analyze_spectrum(&self, samples: &[Sample]) -> Vec<SignalStrength> {
-        vec![]
-    }
+    // pub fn analyze_bucket(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+    //     let bucket = self.samples_to_bucket(samples)?;
+
+    //     // Using the same unit circle analogy found here: https://dsp.stackexchange.com/q/2970/43899
+    //     // The zero index is skipped, since the zero frequency does not apply here.
+    //     let valid_fft_indices = 1..=(bucket.len() / 2);
+
+    //     let mut assignments = vec![(0.0f32, 0); self.buckets.len()];
+
+    //     for i in valid_fft_indices {
+    //         let freq_bin = self.fft_bin_size * i as f32;
+
+    //         // Where does this frequency bin fall in the band bucket?
+    //         if let Some(band_index) = self.buckets.locate(freq_bin) {
+    //             if let Some((value, count)) = assignments.get_mut(band_index) {
+    //                 *value += bucket[i];
+    //                 *count += 1;
+    //             }
+    //         }
+    //     }
+
+    //     let band_values =
+    //         assignments
+    //         .into_iter()
+    //         .map(|(value, count)| {
+    //             if count > 0 { value / count as f32 }
+    //             else { 0.0 }
+    //         })
+    //         .collect::<Vec<_>>()
+    //     ;
+
+    //     assert_eq!(self.buckets.len(), band_values.len());
+
+    //     let total_sum = (&band_values).into_iter().sum::<f32>();
+
+    //     if total_sum > 0.0 { band_values.into_iter().map(|x| x / total_sum).collect() }
+    //     else { band_values }
+
+    //     vec![]
+    // }
 }
 
 #[cfg(test)]
@@ -153,6 +195,6 @@ mod tests {
         }
 
         // println!("{:?}", signal_strength);
-        println!("{:?}", analyzer.spectrum_bands());
+        println!("{:?}", analyzer.buckets());
     }
 }
