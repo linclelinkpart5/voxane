@@ -95,7 +95,7 @@ impl Analyzer {
 
     /// Analyzes a slice of samples, representing a buffer of audio data for one channel.
     /// The sample slice is assumed to be sampled at the same frequency as what was used to create this analyzer.
-    pub fn analyze(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+    pub fn calculate_spectrum(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
         // Take enough from the end of the samples to fill the FFT buffer.
         if !(samples.len() >= self.fft_buffer_len()) { Err(Error::NotEnoughSamples)? }
 
@@ -126,46 +126,46 @@ impl Analyzer {
         Ok(res)
     }
 
-    // pub fn analyze_bucket(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
-    //     let bucket = self.samples_to_bucket(samples)?;
+    pub fn calculate_bucketed_spectrum(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+        let spectrum = self.calculate_spectrum(samples)?;
 
-    //     // Using the same unit circle analogy found here: https://dsp.stackexchange.com/q/2970/43899
-    //     // The zero index is skipped, since the zero frequency does not apply here.
-    //     let valid_fft_indices = 1..=(bucket.len() / 2);
+        // Using the same unit circle analogy found here: https://dsp.stackexchange.com/q/2970/43899
+        // The zero index is skipped, since the zero frequency does not apply here.
+        let valid_fft_indices = 1..=(spectrum.len() / 2);
 
-    //     let mut assignments = vec![(0.0f32, 0); self.buckets.len()];
+        let mut assignments = vec![(0.0f32, 0); self.buckets.len()];
 
-    //     for i in valid_fft_indices {
-    //         let freq_bin = self.fft_bin_size * i as f32;
+        for i in valid_fft_indices {
+            let freq_bin = self.fft_bin_size * i as f32;
 
-    //         // Where does this frequency bin fall in the band bucket?
-    //         if let Some(band_index) = self.buckets.locate(freq_bin) {
-    //             if let Some((value, count)) = assignments.get_mut(band_index) {
-    //                 *value += bucket[i];
-    //                 *count += 1;
-    //             }
-    //         }
-    //     }
+            // Where does this frequency bin fall in the buckets?
+            if let Some(band_index) = self.buckets.locate(freq_bin) {
+                if let Some((value, count)) = assignments.get_mut(band_index) {
+                    *value += spectrum[i];
+                    *count += 1;
+                }
+            }
+        }
 
-    //     let band_values =
-    //         assignments
-    //         .into_iter()
-    //         .map(|(value, count)| {
-    //             if count > 0 { value / count as f32 }
-    //             else { 0.0 }
-    //         })
-    //         .collect::<Vec<_>>()
-    //     ;
+        let band_values =
+            assignments
+            .into_iter()
+            .map(|(value, count)| {
+                if count > 0 { value / count as f32 }
+                else { 0.0 }
+            })
+            .collect::<Vec<_>>()
+        ;
 
-    //     assert_eq!(self.buckets.len(), band_values.len());
+        assert_eq!(self.buckets.len(), band_values.len());
 
-    //     let total_sum = (&band_values).into_iter().sum::<f32>();
+        // let total_sum = (&band_values).into_iter().sum::<f32>();
 
-    //     if total_sum > 0.0 { band_values.into_iter().map(|x| x / total_sum).collect() }
-    //     else { band_values }
+        // if total_sum > 0.0 { band_values.into_iter().map(|x| x / total_sum).collect() }
+        // else { band_values }
 
-    //     vec![]
-    // }
+        Ok(band_values)
+    }
 }
 
 #[cfg(test)]
@@ -176,7 +176,7 @@ mod tests {
     use crate::wave::WaveGen;
 
     #[test]
-    fn test_analyze() {
+    fn test_calculate_spectrum() {
         const FFT_LEN: usize = 512;
 
         let analyzer = Analyzer::new(FFT_LEN, 16, Window::Rectangle, 20.0, 10000.0, 44100.0).unwrap();
@@ -186,11 +186,11 @@ mod tests {
         // Generate a wave sample buffer.
         let samples: Vec<Sample> = WaveGen::new(WaveFunction::Sine, 44100).take(FFT_LEN).collect();
 
-        let signal_strength: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
+        let spectrum: Vec<SignalStrength> = analyzer.calculate_spectrum(&samples).unwrap();
 
         let fft_bin_size = 44100.0 / FFT_LEN as f32;
 
-        for (n, ss) in signal_strength.iter().enumerate() {
+        for (n, ss) in spectrum.iter().enumerate() {
             println!("{}: {} ({} Hz)", n, ss, n as f32 * fft_bin_size);
         }
 
