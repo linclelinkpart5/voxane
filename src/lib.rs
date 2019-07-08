@@ -14,6 +14,7 @@ pub enum Error {
     OutOfOrderCutoffs,
     InvalidSamplingRate,
     NotEnoughSamples,
+    IncorrectBufferSize(usize, usize),
 }
 
 impl std::fmt::Display for Error {
@@ -25,6 +26,7 @@ impl std::fmt::Display for Error {
             Error::OutOfOrderCutoffs => write!(f, "lower cutoff must be less than upper cutoff"),
             Error::InvalidSamplingRate => write!(f, "sampling rate must be greater than zero"),
             Error::NotEnoughSamples => write!(f, "not enough samples to fill buffer"),
+            Error::IncorrectBufferSize(e, p) => write!(f, "incorrect buffer size {{ expected: {}, produced: {} }}", e, p),
         }
     }
 }

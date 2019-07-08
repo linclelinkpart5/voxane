@@ -159,11 +159,6 @@ impl Analyzer {
 
         assert_eq!(self.buckets.len(), band_values.len());
 
-        // let total_sum = (&band_values).into_iter().sum::<f32>();
-
-        // if total_sum > 0.0 { band_values.into_iter().map(|x| x / total_sum).collect() }
-        // else { band_values }
-
         Ok(band_values)
     }
 }
