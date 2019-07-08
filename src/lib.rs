@@ -6,6 +6,7 @@ pub mod analyzer;
 pub mod window;
 pub mod wave;
 pub mod sample;
+pub mod audio_data;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
