@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::types::Sample;
+use crate::sample::Sample;
 
 const AMPLITUDE: f32 = 0.25;
 const FREQUENCY: f32 = 440.0;

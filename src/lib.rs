@@ -5,6 +5,7 @@ pub mod buckets;
 pub mod analyzer;
 pub mod window;
 pub mod wave;
+pub mod sample;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {

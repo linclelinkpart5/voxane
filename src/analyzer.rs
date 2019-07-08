@@ -5,7 +5,7 @@ use rustfft::FFTplanner;
 use rustfft::num_complex::Complex;
 
 use crate::Error;
-use crate::types::Sample;
+use crate::sample::Sample;
 use crate::types::Frequency;
 use crate::types::SignalStrength;
 use crate::buckets::Buckets;
