@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_new() -> Result<(), Error> {
-        let expected: Vec<(f32, f32)> = vec![
+        let expected: Vec<(Frequency, Frequency)> = vec![
             (10.0, 16.179424),
             (16.179424, 26.177376),
             (26.177376, 42.353485),
@@ -100,7 +100,7 @@ mod tests {
             assert_approx_eq!(e.1, p.1);
         }
 
-        let expected: Vec<(f32, f32)> = vec![
+        let expected: Vec<(Frequency, Frequency)> = vec![
             (20.0, 48.520767),
             (48.520767, 117.71324),
             (117.71324, 285.57684),

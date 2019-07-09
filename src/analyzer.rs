@@ -22,7 +22,7 @@ impl<T> StorageMut for T where T: Storage + std::ops::DerefMut {}
 #[derive(Clone)]
 pub struct Analyzer {
     // Reusable FFT algorithm.
-    fft: Arc<FFT<Sample>>,
+    fft: Arc<dyn FFT<Sample>>,
 
     // FFT frequency resolution, i.e. how far apart consecutive FFT bins are from each other.
     fft_bin_size: Frequency,
@@ -32,6 +32,9 @@ pub struct Analyzer {
 
     // Defines the target output frequency buckets.
     buckets: Buckets,
+
+    // Skip this many samples between processing each sample.
+    // downsample_skip: usize,
 
     // input: [Vec<rustfft::num_complex::Complex<Sample>>; 2],
     // output: Vec<rustfft::num_complex::Complex<Sample>>,
@@ -94,7 +97,7 @@ impl Analyzer {
     }
 
     /// Analyzes a slice of samples, representing a buffer of audio data for one channel.
-    /// The sample slice is assumed to be sampled at the same frequency as what was used to create this analyzer.
+    /// The sample slice is assumed to be sampled at the same sampling rate as what was used to create this analyzer.
     pub fn calculate_spectrum(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
         // Take enough from the end of the samples to fill the FFT buffer.
         if !(samples.len() >= self.fft_buffer_len()) { Err(Error::NotEnoughSamples)? }
@@ -173,17 +176,19 @@ mod tests {
     #[test]
     fn test_calculate_spectrum() {
         const FFT_LEN: usize = 512;
+        const NUM_BUCKETS: usize = 16;
+        const SAMPLE_RATE: usize = 44100;
 
-        let analyzer = Analyzer::new(FFT_LEN, 16, Window::Rectangle, 20.0, 10000.0, 44100.0).unwrap();
+        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangle, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
 
         // let samples: Vec<Sample> = vec![1.0; 256];
 
         // Generate a wave sample buffer.
-        let samples: Vec<Sample> = WaveGen::new(WaveFunction::Sine, 44100).take(FFT_LEN).collect();
+        let samples: Vec<Sample> = WaveGen::new(WaveFunction::Sine, SAMPLE_RATE).take(FFT_LEN).collect();
 
         let spectrum: Vec<SignalStrength> = analyzer.calculate_spectrum(&samples).unwrap();
 
-        let fft_bin_size = 44100.0 / FFT_LEN as f32;
+        let fft_bin_size = SAMPLE_RATE as Frequency / FFT_LEN as f32;
 
         for (n, ss) in spectrum.iter().enumerate() {
             println!("{}: {} ({} Hz)", n, ss, n as f32 * fft_bin_size);

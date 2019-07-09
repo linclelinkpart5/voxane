@@ -15,7 +15,7 @@ pub enum WaveFunction {
 }
 
 impl WaveFunction {
-    pub fn val(&self, sample_clock: u32, sample_rate: u32) -> Sample {
+    pub fn val(&self, sample_clock: usize, sample_rate: usize) -> Sample {
         let f_x = sample_clock as f32 * FREQUENCY / sample_rate as f32;
         AMPLITUDE * match self {
             &WaveFunction::Sine => (2.0 * PI * f_x).sin(),
@@ -29,12 +29,12 @@ impl WaveFunction {
 
 pub struct WaveGen {
     function: WaveFunction,
-    sample_rate: u32,
-    sample_clock: u32,
+    sample_rate: usize,
+    sample_clock: usize,
 }
 
 impl WaveGen {
-    pub fn new(function: WaveFunction, sample_rate: u32) -> Self {
+    pub fn new(function: WaveFunction, sample_rate: usize) -> Self {
         Self {
             function,
             sample_rate,
