@@ -33,9 +33,14 @@ impl SampleBuffer {
         self.0.iter()
     }
 
-    pub fn iter_tail(&self) -> impl Iterator<Item = &Sample> {
-        self.0.iter().rev()
+    pub fn mean_sqr(&self) -> SignalStrength {
+        if self.len() == 0 { return 0.0 }
+
+        // Taken from http://replaygain.hydrogenaud.io/proposal/rms_energy.html
+        self.iter().map(|v| v.powi(2)).sum::<SignalStrength>() / self.len() as SignalStrength
     }
 
-    // TODO: Create `.volume()` method on future enum that abstracts number of channels.
+    pub fn root_mean_sqr(&self) -> SignalStrength {
+        self.mean_sqr().sqrt()
+    }
 }
