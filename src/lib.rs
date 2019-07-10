@@ -3,7 +3,7 @@ pub mod audio;
 pub mod types;
 pub mod buckets;
 pub mod analyzer;
-pub mod window;
+pub mod window_kind;
 pub mod wave;
 pub mod sample;
 pub mod audio_data;

@@ -9,7 +9,7 @@ use crate::sample::Sample;
 use crate::types::Frequency;
 use crate::types::SignalStrength;
 use crate::buckets::Buckets;
-use crate::window::Window;
+use crate::window_kind::WindowKind;
 
 pub trait Storage: std::ops::Deref<Target = [SignalStrength]> {}
 
@@ -28,7 +28,7 @@ pub struct Analyzer {
     fft_bin_size: Frequency,
 
     // FFT window type to use for smoothing.
-    window: Window,
+    window_kind: WindowKind,
 
     // Defines the target output frequency buckets.
     buckets: Buckets,
@@ -47,7 +47,7 @@ impl Analyzer {
     pub fn new(
         fft_buffer_len: usize,
         bucket_len: usize,
-        window: Window,
+        window_kind: WindowKind,
         lower_cutoff: Frequency,
         upper_cutoff: Frequency,
         sampling_rate: Frequency,
@@ -66,7 +66,7 @@ impl Analyzer {
         Ok(Analyzer {
             fft,
             fft_bin_size,
-            window,
+            window_kind,
             buckets,
         })
     }
@@ -103,7 +103,7 @@ impl Analyzer {
         if !(samples.len() >= self.fft_buffer_len()) { Err(Error::NotEnoughSamples)? }
 
         let sample_iter = samples.into_iter().skip(samples.len() - self.fft_buffer_len());
-        let window_iter = self.window.generate(self.fft_buffer_len());
+        let window_iter = self.window_kind.generate(self.fft_buffer_len());
 
         let mut fft_input_buffer = Vec::with_capacity(self.fft_buffer_len());
         let mut fft_output_buffer = vec![Complex::from(0.0); self.fft_buffer_len()];
@@ -185,7 +185,7 @@ mod tests {
     fn test_calculate_spectrum() {
         const FFT_LEN: usize = 16;
 
-        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
+        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, WindowKind::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
 
         let samples = generate_samples(FFT_LEN);
 
@@ -229,7 +229,7 @@ mod tests {
     fn test_bucketize_spectrum() {
         const FFT_LEN: usize = 512;
 
-        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
+        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, WindowKind::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
 
         let samples = generate_samples(FFT_LEN);
 
