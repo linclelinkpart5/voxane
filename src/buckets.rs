@@ -37,14 +37,17 @@ impl Buckets {
         Ok(Self(partitions))
     }
 
+    #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    #[inline]
     pub fn lower_cutoff(&self) -> Option<Frequency> {
         self.0.first().map(|(f, _)| *f)
     }
 
+    #[inline]
     pub fn upper_cutoff(&self) -> Option<Frequency> {
         self.0.last().map(|(_, f)| *f)
     }

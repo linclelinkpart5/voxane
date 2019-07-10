@@ -19,6 +19,7 @@ pub enum Error {
     NotEnoughSamples,
     UnexpectedInputBufferSize(usize, usize),
     UnexpectedOutputBufferSize(usize, usize),
+    NumSamples(usize, usize),
 }
 
 impl std::fmt::Display for Error {
@@ -32,6 +33,7 @@ impl std::fmt::Display for Error {
             Error::NotEnoughSamples => write!(f, "not enough samples to fill buffer"),
             Error::UnexpectedInputBufferSize(e, p) => write!(f, "unexpected input buffer size {{ expected: {}, produced: {} }}", e, p),
             Error::UnexpectedOutputBufferSize(e, p) => write!(f, "unexpected output buffer size {{ expected: {}, produced: {} }}", e, p),
+            Error::NumSamples(e, p) => write!(f, "unexpected number of samples {{ expected: {}, produced: {} }}", e, p),
         }
     }
 }
