@@ -185,7 +185,7 @@ mod tests {
     fn test_calculate_spectrum() {
         const FFT_LEN: usize = 16;
 
-        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangle, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
+        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
 
         let samples = generate_samples(FFT_LEN);
 
@@ -229,7 +229,7 @@ mod tests {
     fn test_bucketize_spectrum() {
         const FFT_LEN: usize = 512;
 
-        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangle, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
+        let analyzer = Analyzer::new(FFT_LEN, NUM_BUCKETS, Window::Rectangular, 20.0, 10000.0, SAMPLE_RATE as Frequency).unwrap();
 
         let samples = generate_samples(FFT_LEN);
 

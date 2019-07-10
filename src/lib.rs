@@ -7,6 +7,7 @@ pub mod window;
 pub mod wave;
 pub mod sample;
 pub mod audio_data;
+pub mod fft_engine;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -16,7 +17,8 @@ pub enum Error {
     OutOfOrderCutoffs,
     InvalidSamplingRate,
     NotEnoughSamples,
-    IncorrectBufferSize(usize, usize),
+    UnexpectedInputBufferSize(usize, usize),
+    UnexpectedOutputBufferSize(usize, usize),
 }
 
 impl std::fmt::Display for Error {
@@ -28,7 +30,8 @@ impl std::fmt::Display for Error {
             Error::OutOfOrderCutoffs => write!(f, "lower cutoff must be less than upper cutoff"),
             Error::InvalidSamplingRate => write!(f, "sampling rate must be greater than zero"),
             Error::NotEnoughSamples => write!(f, "not enough samples to fill buffer"),
-            Error::IncorrectBufferSize(e, p) => write!(f, "incorrect buffer size {{ expected: {}, produced: {} }}", e, p),
+            Error::UnexpectedInputBufferSize(e, p) => write!(f, "unexpected input buffer size {{ expected: {}, produced: {} }}", e, p),
+            Error::UnexpectedOutputBufferSize(e, p) => write!(f, "unexpected output buffer size {{ expected: {}, produced: {} }}", e, p),
         }
     }
 }
