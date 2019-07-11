@@ -94,6 +94,8 @@ mod tests {
 
     use assert_approx_eq::assert_approx_eq;
 
+    use crate::test_util::TestUtil;
+
     #[test]
     fn test_new() {
         let expected: Vec<(Frequency, Frequency)> = vec![
@@ -165,28 +167,49 @@ mod tests {
         }
     }
 
+    const SAMPLES_PER_PERIOD: usize = 44100;
+    const FREQUENCY: Frequency = 1000.0;
+
     #[test]
     fn test_bucketize() {
-        let buckets = Buckets::new(10.0, 22050.0, 16).unwrap();
+        use crate::analyzer::Analyzer;
+        use crate::window_kind::WindowKind;
 
-        let spectrum: Vec<SignalStrength> = vec![
-            3.0186355,
-            0.31955782,
-            0.07949541,
-            0.03741721,
-            0.023034703,
-            0.016638935,
-            0.013468596,
-            0.011947523,
-            0.011491794,
-            0.011947523,
-            0.013468596,
-            0.016638935,
-            0.023034703,
-            0.03741721,
-            0.07949541,
-            0.31955782,
+        let buckets = Buckets::new(20.0, 10000.0, 16).unwrap();
+
+        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, 1024);
+
+        let analyzer = Analyzer::new(1024, WindowKind::default());
+
+        let spectrum = analyzer.analyze(&samples).unwrap();
+
+        let produced = buckets.bucketize(&spectrum, SAMPLES_PER_PERIOD).unwrap();
+
+        let expected = vec![
+            0.0,
+            1.7029626,
+            0.0,
+            1.7407556,
+            1.8054703,
+            1.8997737,
+            6.6312847,
+            9.183684,
+            30.809696,
+            727.12177,
+            15472.85,
+            49.126057,
+            17.683151,
+            9.717427,
+            6.2228317,
+            4.263113,
         ];
+
+        for (e, p) in expected.into_iter().zip(&produced) {
+            assert_approx_eq!(e, p);
+        }
+
+        println!("{:?}", produced);
+        println!("{:?}", buckets.bands());
     }
 }
 

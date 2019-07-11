@@ -66,16 +66,10 @@ mod tests {
 
     use assert_approx_eq::assert_approx_eq;
 
-    use crate::wave::WaveFunction;
-    use crate::wave::WaveGen;
+    use crate::test_util::TestUtil;
 
     const SAMPLES_PER_PERIOD: usize = 44100;
     const FREQUENCY: Frequency = 440.0;
-
-    fn generate_wave_samples(len: usize) -> Vec<Sample> {
-        // Generate a wave sample buffer.
-        WaveGen::new(WaveFunction::Sine, SAMPLES_PER_PERIOD, FREQUENCY).take(len).collect()
-    }
 
     #[test]
     fn test_analyze() {
@@ -83,7 +77,7 @@ mod tests {
 
         let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
-        let samples = generate_wave_samples(FFT_LEN);
+        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
         let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
 
