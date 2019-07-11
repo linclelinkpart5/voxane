@@ -8,31 +8,24 @@ use crate::Error;
 use crate::sample::Sample;
 use crate::types::Frequency;
 use crate::types::SignalStrength;
-use crate::buckets::Buckets;
 use crate::window_kind::WindowKind;
-
-pub trait Storage: std::ops::Deref<Target = [SignalStrength]> {}
-
-pub trait StorageMut: std::ops::Deref<Target = [SignalStrength]> + std::ops::DerefMut {}
-
-impl<T> Storage for T where T: std::ops::Deref<Target = [SignalStrength]> {}
-
-impl<T> StorageMut for T where T: Storage + std::ops::DerefMut {}
 
 #[derive(Clone)]
 pub struct Analyzer {
     // Reusable FFT algorithm.
     fft: Arc<dyn FFT<Sample>>,
 
-    // FFT window type to use for smoothing.
-    window_kind: WindowKind,
+    // FFT window to use for smoothing.
+    window: Vec<f32>,
 }
 
 impl Analyzer {
     pub fn new(len: usize, window_kind: WindowKind) -> Self {
         let fft = FFTplanner::new(false).plan_fft(len);
 
-        Analyzer { fft, window_kind, }
+        let window = window_kind.generate(len).into_iter().map(|w| w as f32).collect();
+
+        Analyzer { fft, window, }
     }
 
     #[inline]
@@ -40,72 +33,31 @@ impl Analyzer {
         self.fft.len()
     }
 
-    /// Analyzes a slice of samples, representing a buffer of audio data for one channel.
-    /// The sample slice is assumed to be sampled at the same sampling rate as what was used to create this analyzer.
-    pub fn calculate_spectrum(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
-        // Take enough from the end of the samples to fill the FFT buffer.
+    /// Analyzes a sample buffer, representing a buffer of audio data for one channel.
+    pub fn analyze(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+        // Check to see if the number of samples is correct.
         if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
 
-        let sample_iter = samples.into_iter().skip(samples.len() - self.len());
-        let window_iter = self.window_kind.generate(self.len());
-
-        let mut fft_input_buffer = Vec::with_capacity(self.len());
+        let mut fft_input_buffer =
+            samples
+            .iter()
+            .zip(&self.window)
+            .map(|(s, w)| Complex::new(s * w, 0.0))
+            .collect::<Vec<_>>()
+        ;
         let mut fft_output_buffer = vec![Complex::from(0.0); self.len()];
-
-        for (sample_v, window_v) in sample_iter.zip(window_iter) {
-            fft_input_buffer.push(Complex::from(sample_v * window_v as f32));
-        }
-
-        // The FFT buffer should have the expected number of elements.
-        assert_eq!(self.len(), fft_input_buffer.len());
 
         self.fft.process(fft_input_buffer.as_mut_slice(), fft_output_buffer.as_mut_slice());
 
         let res =
             fft_output_buffer
                 .into_iter()
-                // .take(self.len() / 2)
-                // .skip(1)
                 .map(|o| o.norm_sqr())
                 .collect()
         ;
 
         Ok(res)
     }
-
-    // pub fn bucketize_spectrum(&self, spectrum: &[SignalStrength]) -> Vec<SignalStrength> {
-    //     // Using the same unit circle analogy found here: https://dsp.stackexchange.com/q/2970/43899
-    //     // The zero index is skipped, since the zero frequency does not apply here.
-    //     let valid_fft_indices = 1..=(spectrum.len() / 2);
-
-    //     let mut assignments = vec![(0.0f32, 0); self.buckets.len()];
-
-    //     for i in valid_fft_indices {
-    //         let freq_bin = self.fft_bin_size * i as f32;
-
-    //         // Where does this frequency bin fall in the buckets?
-    //         if let Some(band_index) = self.buckets.locate(freq_bin) {
-    //             if let Some((value, count)) = assignments.get_mut(band_index) {
-    //                 *value += spectrum[i];
-    //                 *count += 1;
-    //             }
-    //         }
-    //     }
-
-    //     let bucketized =
-    //         assignments
-    //         .into_iter()
-    //         .map(|(value, count)| {
-    //             if count > 0 { value / count as f32 }
-    //             else { 0.0 }
-    //         })
-    //         .collect::<Vec<_>>()
-    //     ;
-
-    //     assert_eq!(self.buckets.len(), bucketized.len());
-
-    //     bucketized
-    // }
 }
 
 #[cfg(test)]
@@ -117,9 +69,7 @@ mod tests {
     use crate::wave::WaveFunction;
     use crate::wave::WaveGen;
 
-    const NUM_BUCKETS: usize = 16;
     const SAMPLES_PER_PERIOD: usize = 44100;
-    const SAMPLE_RATE: Frequency = 44100 as Frequency;
     const FREQUENCY: Frequency = 440.0;
 
     fn generate_samples(len: usize) -> Vec<Sample> {
@@ -128,14 +78,14 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_spectrum() {
+    fn test_analyze() {
         const FFT_LEN: usize = 16;
 
         let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
         let samples = generate_samples(FFT_LEN);
 
-        let spectrum: Vec<SignalStrength> = analyzer.calculate_spectrum(&samples).unwrap();
+        let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 
@@ -179,7 +129,7 @@ mod tests {
 
     //     let samples = generate_samples(FFT_LEN);
 
-    //     let spectrum: Vec<SignalStrength> = analyzer.calculate_spectrum(&samples).unwrap();
+    //     let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
     //     let bucketed_spectrum = analyzer.bucketize_spectrum(&spectrum);
 
     //     assert_eq!(NUM_BUCKETS, bucketed_spectrum.len());

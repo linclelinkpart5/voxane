@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 use crate::Error;
 use crate::types::Frequency;
+use crate::types::SignalStrength;
 
 #[derive(Clone)]
 pub struct Buckets(Vec<(Frequency, Frequency)>);
@@ -42,16 +43,6 @@ impl Buckets {
         self.0.len()
     }
 
-    #[inline]
-    pub fn lower_cutoff(&self) -> Option<Frequency> {
-        self.0.first().map(|(f, _)| *f)
-    }
-
-    #[inline]
-    pub fn upper_cutoff(&self) -> Option<Frequency> {
-        self.0.last().map(|(_, f)| *f)
-    }
-
     pub fn locate(&self, target: Frequency) -> Option<usize> {
         self.0.binary_search_by(|(lo, hi)| {
             match (lo <= &target, &target < hi) {
@@ -66,6 +57,34 @@ impl Buckets {
     #[inline]
     pub fn bands(&self) -> &[(Frequency, Frequency)] {
         self.0.as_slice()
+    }
+
+    pub fn bucketize(&self, spectrum: &[SignalStrength], sampling_rate: usize) -> Result<Vec<SignalStrength>, Error> {
+        if !(sampling_rate > 0) { Err(Error::SamplingRate(sampling_rate))? }
+
+        let mut bucketized = vec![0.0f32; self.len()];
+
+        match spectrum.len() {
+            0 => {},
+            n => {
+                // Using the same unit circle analogy found here: https://dsp.stackexchange.com/q/2970/43899
+                // The zero index is skipped, since the zero frequency does not apply here.
+                let valid_fft_indices = 1..=(n / 2);
+
+                let fft_bin_size = sampling_rate as f32 / n as f32;
+
+                for i in valid_fft_indices {
+                    let freq_bin = fft_bin_size * i as f32;
+
+                    // Where does this frequency bin fall in the buckets?
+                    if let Some(band_index) = self.locate(freq_bin) {
+                        bucketized[band_index] += spectrum[i];
+                    }
+                }
+            },
+        };
+
+        Ok(bucketized)
     }
 }
 
@@ -148,6 +167,11 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_bucketize() {
+        let buckets = Buckets::new(10.0, 22050.0, 16).unwrap();
     }
 }
 

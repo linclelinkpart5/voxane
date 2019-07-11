@@ -7,9 +7,9 @@ pub type Sample = f32;
 pub struct SampleBuffer(VecDeque<Sample>);
 
 impl SampleBuffer {
-    /// Create a new empty sample buffer given a size.
-    pub fn new(size: usize) -> Self {
-        let buffer = VecDeque::from(vec![0.0; size]);
+    /// Create a new sample buffer.
+    pub fn new(len: usize) -> Self {
+        let buffer = VecDeque::from(vec![0.0; len]);
         Self(buffer)
     }
 

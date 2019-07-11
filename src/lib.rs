@@ -20,6 +20,7 @@ pub enum Error {
     UnexpectedInputBufferSize(usize, usize),
     UnexpectedOutputBufferSize(usize, usize),
     NumSamples(usize, usize),
+    SamplingRate(usize),
 }
 
 impl std::fmt::Display for Error {
@@ -34,6 +35,7 @@ impl std::fmt::Display for Error {
             Error::UnexpectedInputBufferSize(e, p) => write!(f, "unexpected input buffer size {{ expected: {}, produced: {} }}", e, p),
             Error::UnexpectedOutputBufferSize(e, p) => write!(f, "unexpected output buffer size {{ expected: {}, produced: {} }}", e, p),
             Error::NumSamples(e, p) => write!(f, "unexpected number of samples {{ expected: {}, produced: {} }}", e, p),
+            Error::SamplingRate(s) => write!(f, "sampling rate must be greater than zero and finite {{ found: {} }}", s),
         }
     }
 }
