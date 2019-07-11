@@ -8,6 +8,7 @@ pub mod wave;
 pub mod sample;
 pub mod audio_data;
 pub mod fft_engine;
+#[cfg(test)] pub mod test_util;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Error {

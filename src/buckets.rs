@@ -95,7 +95,7 @@ mod tests {
     use assert_approx_eq::assert_approx_eq;
 
     #[test]
-    fn test_new() -> Result<(), Error> {
+    fn test_new() {
         let expected: Vec<(Frequency, Frequency)> = vec![
             (10.0, 16.179424),
             (16.179424, 26.177376),
@@ -114,7 +114,7 @@ mod tests {
             (8423.307, 13628.425),
             (13628.425, 22050.0),
         ];
-        let produced = Buckets::new(10.0, 22050.0, 16)?;
+        let produced = Buckets::new(10.0, 22050.0, 16).unwrap();
 
         assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -132,7 +132,7 @@ mod tests {
             (4077.7063, 9892.672),
             (9892.672, 24000.0),
         ];
-        let produced = Buckets::new(20.0, 24000.0, 8)?;
+        let produced = Buckets::new(20.0, 24000.0, 8).unwrap();
 
         assert_eq!(expected.len(), produced.len());
         for (e, p) in expected.into_iter().zip(produced.0) {
@@ -140,15 +140,13 @@ mod tests {
             assert_approx_eq!(e.1, p.1);
         }
 
-        let produced = Buckets::new(20.0, 44100.0, 0)?;
+        let produced = Buckets::new(20.0, 44100.0, 0).unwrap();
         assert_eq!(0, produced.len());
-
-        Ok(())
     }
 
     #[test]
-    fn test_locate() -> Result<(), Error> {
-        let partitions = Buckets::new(10.0, 22050.0, 16)?;
+    fn test_locate() {
+        let partitions = Buckets::new(10.0, 22050.0, 16).unwrap();
 
         let inputs_and_expected = vec![
             (22049.9, Some(15)),
@@ -165,13 +163,30 @@ mod tests {
             let produced = partitions.locate(input);
             assert_eq!(expected, produced);
         }
-
-        Ok(())
     }
 
     #[test]
     fn test_bucketize() {
         let buckets = Buckets::new(10.0, 22050.0, 16).unwrap();
+
+        let spectrum: Vec<SignalStrength> = vec![
+            3.0186355,
+            0.31955782,
+            0.07949541,
+            0.03741721,
+            0.023034703,
+            0.016638935,
+            0.013468596,
+            0.011947523,
+            0.011491794,
+            0.011947523,
+            0.013468596,
+            0.016638935,
+            0.023034703,
+            0.03741721,
+            0.07949541,
+            0.31955782,
+        ];
     }
 }
 

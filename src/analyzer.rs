@@ -72,7 +72,7 @@ mod tests {
     const SAMPLES_PER_PERIOD: usize = 44100;
     const FREQUENCY: Frequency = 440.0;
 
-    fn generate_samples(len: usize) -> Vec<Sample> {
+    fn generate_wave_samples(len: usize) -> Vec<Sample> {
         // Generate a wave sample buffer.
         WaveGen::new(WaveFunction::Sine, SAMPLES_PER_PERIOD, FREQUENCY).take(len).collect()
     }
@@ -83,7 +83,7 @@ mod tests {
 
         let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
-        let samples = generate_samples(FFT_LEN);
+        let samples = generate_wave_samples(FFT_LEN);
 
         let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
 
@@ -120,56 +120,4 @@ mod tests {
 
         // println!("{:?}", analyzer.buckets());
     }
-
-    // #[test]
-    // fn test_bucketize_spectrum() {
-    //     const FFT_LEN: usize = 512;
-
-    //     let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
-
-    //     let samples = generate_samples(FFT_LEN);
-
-    //     let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
-    //     let bucketed_spectrum = analyzer.bucketize_spectrum(&spectrum);
-
-    //     assert_eq!(NUM_BUCKETS, bucketed_spectrum.len());
-
-    //     for (bucket, b_ss) in analyzer.buckets().iter().zip(&bucketed_spectrum) {
-    //         println!("[{}, {}): {}", bucket.0, bucket.1, b_ss);
-    //     }
-
-    //     // println!("{:?}", analyzer.buckets());
-    //     // println!("{:?}", bucketed_spectrum);
-
-    //     // let expected: Vec<SignalStrength> = vec![
-    //     //     3.0186355,
-    //     //     0.31955782,
-    //     //     0.07949541,
-    //     //     0.03741721,
-    //     //     0.023034703,
-    //     //     0.016638935,
-    //     //     0.013468596,
-    //     //     0.011947523,
-    //     //     0.011491794,
-    //     //     0.011947523,
-    //     //     0.013468596,
-    //     //     0.016638935,
-    //     //     0.023034703,
-    //     //     0.03741721,
-    //     //     0.07949541,
-    //     //     0.31955782,
-    //     // ];
-
-    //     // for (e, ss) in expected.into_iter().zip(&spectrum) {
-    //     //     assert_approx_eq!(e, ss);
-    //     // }
-
-    //     // let fft_bin_size = SAMPLE_RATE as Frequency / FFT_LEN as f32;
-
-    //     // for (n, ss) in spectrum.iter().enumerate() {
-    //     //     println!("{}: {} ({} Hz)", n, ss, n as f32 * fft_bin_size);
-    //     // }
-
-    //     // println!("{:?}", analyzer.buckets());
-    // }
 }

@@ -98,8 +98,8 @@ impl SoundCard {
 mod tests {
     use super::SoundCard;
 
-    #[test]
-    fn test_run() {
-        SoundCard::run();
-    }
+    // #[test]
+    // fn test_run() {
+    //     SoundCard::run();
+    // }
 }
