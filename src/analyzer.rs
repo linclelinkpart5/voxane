@@ -63,8 +63,6 @@ impl Analyzer {
 mod tests {
     use super::*;
 
-    use assert_approx_eq::assert_approx_eq;
-
     use crate::test_util::TestUtil;
     use crate::types::Frequency;
 

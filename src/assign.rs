@@ -72,8 +72,6 @@ mod tests {
     use rustfft::FFTplanner;
     use rustfft::num_complex::Complex;
 
-    use assert_approx_eq::assert_approx_eq;
-
     const PATH: &'static str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/wav/sin_440hz_44100hz_samp.wav",

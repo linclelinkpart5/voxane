@@ -1,3 +1,5 @@
+#[cfg(test)] #[macro_use] extern crate assert_approx_eq;
+
 pub mod assign;
 pub mod audio;
 pub mod types;
