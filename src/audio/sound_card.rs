@@ -62,7 +62,6 @@ impl SoundCard {
                         eprintln!("an error occurred on stream {:?}: {}", stream_id, err);
                         return;
                     }
-                    _ => return,
                 };
 
                 // Otherwise write to the wav writer.
@@ -70,19 +69,19 @@ impl SoundCard {
                     StreamData::Input { buffer: UnknownTypeInputBuffer::U16(buffer) } => {
                         println!("Buffer size: {}", buffer.len());
                         for sample in buffer.iter() {
-                            let sample = Sample::to_f32(sample);
+                            let _sample = Sample::to_f32(sample);
                         }
                     },
                     StreamData::Input { buffer: UnknownTypeInputBuffer::I16(buffer) } => {
                         println!("Buffer size: {}", buffer.len());
                         for &sample in buffer.iter() {
-                            let sample = Sample::to_f32(&sample);
+                            let _sample = Sample::to_f32(&sample);
                         }
                     },
                     StreamData::Input { buffer: UnknownTypeInputBuffer::F32(buffer) } => {
                         println!("Buffer size: {}", buffer.len());
                         for &sample in buffer.iter() {
-                            let sample = Sample::to_f32(&sample);
+                            let _sample = Sample::to_f32(&sample);
                         }
                     },
                     _ => (),
@@ -94,12 +93,12 @@ impl SoundCard {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::SoundCard;
+// #[cfg(test)]
+// mod tests {
+//     use super::SoundCard;
 
-    // #[test]
-    // fn test_run() {
-    //     SoundCard::run();
-    // }
-}
+//     #[test]
+//     fn test_run() {
+//         SoundCard::run();
+//     }
+// }

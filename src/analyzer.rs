@@ -6,7 +6,6 @@ use rustfft::num_complex::Complex;
 
 use crate::Error;
 use crate::sample::Sample;
-use crate::types::Frequency;
 use crate::types::SignalStrength;
 use crate::window_kind::WindowKind;
 
@@ -67,6 +66,7 @@ mod tests {
     use assert_approx_eq::assert_approx_eq;
 
     use crate::test_util::TestUtil;
+    use crate::types::Frequency;
 
     const SAMPLES_PER_PERIOD: usize = 44100;
     const FREQUENCY: Frequency = 440.0;
@@ -113,5 +113,39 @@ mod tests {
         // }
 
         // println!("{:?}", analyzer.buckets());
+    }
+
+    #[test]
+    fn test_analyze_large_window() {
+        const FFT_LEN: usize = 2048;
+
+        let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
+
+        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
+
+        let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
+
+        assert_eq!(FFT_LEN, spectrum.len());
+
+        let fft_bin_size = SAMPLES_PER_PERIOD as Frequency / FFT_LEN as f32;
+
+        let expected_max_spectrum_index = (FREQUENCY / fft_bin_size) as usize;
+
+        let produced_max_spectrum_index =
+            spectrum
+            .iter()
+            .take(FFT_LEN / 2)
+            .enumerate()
+            .max_by(|(_, sa), (_, sb)| sa.partial_cmp(&sb).unwrap())
+            .map(|(i, _)| i)
+            .unwrap()
+        ;
+
+        println!("{}, {}", expected_max_spectrum_index, produced_max_spectrum_index);
+        assert_eq!(expected_max_spectrum_index, produced_max_spectrum_index);
+
+        // for (n, ss) in spectrum.iter().enumerate() {
+        //     println!("{}: {} ({} Hz)", n, ss, n as f32 * fft_bin_size);
+        // }
     }
 }
