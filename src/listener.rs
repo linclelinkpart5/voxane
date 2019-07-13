@@ -2,95 +2,127 @@
 
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread::Builder as ThreadBuilder;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering as AtomicOrdering;
 
-use cpal::EventLoop;
 use cpal::UnknownTypeInputBuffer;
 use cpal::StreamData;
-use cpal::Sample;
+use cpal::SampleRate;
+use cpal::SampleFormat;
+use cpal::Format;
 use cpal::traits::HostTrait;
-use cpal::traits::DeviceTrait;
+// use cpal::traits::DeviceTrait;
 use cpal::traits::EventLoopTrait;
 
 use crate::sample::SampleSink;
+use crate::sample::SampleBuffer;
+
+const NUM_CHANNELS: u16 = 2;
 
 pub struct Listener {
-    event_loop: EventLoop,
-    is_running: Arc<AtomicBool>,
     sample_sink: SampleSink,
+    sample_rate: usize,
+    read_size: usize,
+    is_running: Arc<AtomicBool>,
 }
 
 impl Listener {
-    pub fn new(sample_sink: SampleSink) -> Self {
-        // Setup the default input device and stream with the default input format.
-        let host = cpal::default_host();
+    pub fn start(sample_rate: usize, buffer_len: usize, read_size: usize) -> Self {
+        let sample_sink = Arc::new(Mutex::from(SampleBuffer::new(buffer_len)));
+        let is_running = Arc::new(AtomicBool::from(true));
 
-        let event_loop = host.event_loop();
+        // Scope for thread spawning.
+        {
+            let sample_sink = sample_sink.clone();
+            let is_running = is_running.clone();
 
-        let device = host.default_input_device().expect("failed to get default input device");
-        let format = device.default_input_format().expect("failed to get default input format");
-        let stream_id = event_loop.build_input_stream(&device, &format).expect("failed to build input stream");
-        event_loop.play_stream(stream_id).expect("unable to play input stream");
+            // This is a smaller buffer for shuttling data,
+            // in order to keep the sample sink from being locked for too long.
+            let transport_buffer = vec![0.0; read_size * NUM_CHANNELS as usize];
+
+            ThreadBuilder::new()
+                .spawn(move || {
+                    // Set up host, device, format, and stream.
+                    let host = cpal::default_host();
+
+                    let format = Format {
+                        channels: NUM_CHANNELS,
+                        sample_rate: SampleRate(sample_rate as _),
+                        data_type: SampleFormat::F32,
+                    };
+
+                    let event_loop = host.event_loop();
+
+                    let device = host.default_input_device().expect("failed to get default input device");
+
+                    let stream_id = event_loop.build_input_stream(&device, &format).expect("failed to build input stream");
+
+                    event_loop.play_stream(stream_id).unwrap();
+
+                    // Run the event loop and fill sample sink.
+                    event_loop.run(|_stream_id, stream_result| {
+                        // Check to see if a stop is requested.
+                        if !is_running.load(AtomicOrdering::Relaxed) { return }
+
+                        let stream_data = stream_result.unwrap();
+
+                        match stream_data {
+                            StreamData::Input { buffer: UnknownTypeInputBuffer::F32(buffer) } => {
+                                // println!("CPAL buffer size: {}", buffer.len());
+                                for chunk in buffer.chunks(transport_buffer.len()) {
+                                    let mut sample_buffer = sample_sink.lock().unwrap();
+                                    sample_buffer.push_interleaved(&chunk);
+                                }
+                            },
+                            StreamData::Input { .. } => panic!(),
+                            StreamData::Output { .. } => {},
+                        };
+                    });
+                })
+                .unwrap()
+            ;
+        }
 
         Self {
-            event_loop,
-            is_running: Arc::new(AtomicBool::from(false)),
             sample_sink,
+            sample_rate,
+            read_size,
+            is_running,
         }
     }
 
-    pub fn stop(&'static mut self) {
+    pub fn stop(&self) {
         self.is_running.store(false, AtomicOrdering::Relaxed);
     }
 
-    pub fn start(&'static mut self) {
-        self.is_running.store(true, AtomicOrdering::Relaxed);
+    pub fn sample_sink<'a>(&'a self) -> &'a SampleSink {
+        &self.sample_sink
+    }
+}
 
-        let is_running_inner = self.is_running.clone();
-        let sample_sink_inner = self.sample_sink.clone();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        std::thread::spawn(move || {
-            self.event_loop.run(move |stream_id, stream_result| {
-                // If we're done running, return early.
-                if !is_running_inner.load(AtomicOrdering::Relaxed) {
-                    return;
-                }
+    use std::time::Duration;
 
-                let stream_data = match stream_result {
-                    Ok(data) => data,
-                    Err(err) => {
-                        eprintln!("an error occurred on stream {:?}: {}", stream_id, err);
-                        return;
-                    }
-                };
+    #[test]
+    fn test_listen() {
+        let listener = Listener::start(44100, 8192, 256);
 
-                // Otherwise write to the sample sink.
-                match stream_data {
-                    StreamData::Input { buffer: UnknownTypeInputBuffer::U16(buffer) } => {
-                        println!("Buffer size: {}", buffer.len());
-                        for sample in buffer.iter() {
-                            let _sample = Sample::to_f32(sample);
-                        }
-                    },
-                    StreamData::Input { buffer: UnknownTypeInputBuffer::I16(buffer) } => {
-                        println!("Buffer size: {}", buffer.len());
-                        for &sample in buffer.iter() {
-                            let _sample = Sample::to_f32(&sample);
-                        }
-                    },
-                    StreamData::Input { buffer: UnknownTypeInputBuffer::F32(buffer) } => {
-                        println!("Buffer size: {}", buffer.len());
-                        for &sample in buffer.iter() {
-                            let _sample = Sample::to_f32(&sample);
-                        }
-                    },
-                    _ => {
-                        eprintln!("unexpected sample format");
-                        return;
-                    },
-                }
-            });
-        });
+        // listener.start();
+
+        std::thread::sleep(Duration::from_secs(5));
+
+        listener.stop();
+
+        let sample_sink = listener.sample_sink();
+
+        let sample_buffer = sample_sink.lock().unwrap();
+
+        for (l_sample, r_sample) in sample_buffer.iter().take(16) {
+            println!("({}, {})", l_sample, r_sample);
+        }
     }
 }

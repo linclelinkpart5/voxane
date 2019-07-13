@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::MutexGuard;
 use std::collections::VecDeque;
 
 use crate::types::SignalStrength;
