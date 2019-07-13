@@ -7,6 +7,50 @@ use crate::types::SignalStrength;
 
 pub type Sample = f32;
 
+#[derive(Clone, Copy, Debug)]
+pub enum SampleData {
+    Mono(Sample),
+    Stereo(Sample, Sample),
+}
+
+impl SampleData {
+    pub fn as_stereo(&self) -> (Sample, Sample) {
+        match self {
+            &SampleData::Mono(x) => (x, x),
+            &SampleData::Stereo(l, r) => (l, r),
+        }
+    }
+}
+
+impl From<Sample> for SampleData {
+    fn from(x: Sample) -> Self {
+        SampleData::Mono(x)
+    }
+}
+
+impl From<(Sample, Sample)> for SampleData {
+    fn from(lr: (Sample, Sample)) -> Self {
+        SampleData::Stereo(lr.0, lr.1)
+    }
+}
+
+pub enum NewSampleBuffer {
+    Mono(VecDeque<Sample>),
+    Stereo(VecDeque<(Sample, Sample)>),
+}
+
+impl NewSampleBuffer {
+    /// Create a new mono sample buffer.
+    pub fn new_mono(len: usize) -> Self {
+        NewSampleBuffer::Mono(VecDeque::from(vec![0.0; len]))
+    }
+
+    /// Create a new stereo sample buffer.
+    pub fn new_stereo(len: usize) -> Self {
+        NewSampleBuffer::Stereo(VecDeque::from(vec![(0.0, 0.0); len]))
+    }
+}
+
 pub struct SampleBuffer(VecDeque<(Sample, Sample)>);
 
 impl SampleBuffer {
