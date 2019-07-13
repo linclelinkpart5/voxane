@@ -9,6 +9,7 @@ pub mod window_kind;
 pub mod wave;
 pub mod sample;
 pub mod fft_engine;
+pub mod listener;
 #[cfg(test)] pub mod test_util;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
