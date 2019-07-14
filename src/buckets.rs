@@ -11,9 +11,9 @@ impl Buckets {
     // Inspired by https://stackoverflow.com/a/10462090/388739
     pub fn new(lower_cutoff: Frequency, upper_cutoff: Frequency, num_bands: usize) -> Result<Self, Error> {
         // Check invariants.
-        if !(upper_cutoff > 0.0) { Err(Error::InvalidUpperCutoff)? }
-        if !(lower_cutoff > 0.0) { Err(Error::InvalidLowerCutoff)? }
-        if !(lower_cutoff < upper_cutoff) { Err(Error::OutOfOrderCutoffs)? }
+        if !(upper_cutoff > 0.0) { Err(Error::UpperCutoff)? }
+        if !(lower_cutoff > 0.0) { Err(Error::LowerCutoff)? }
+        if !(lower_cutoff < upper_cutoff) { Err(Error::CutoffOrder)? }
 
         // Space out logarithmically.
         let octave_factor = num_bands as f32 / (upper_cutoff / lower_cutoff).log2();

@@ -100,7 +100,7 @@ impl Iterator for SampleBufferIter<'_> {
     type Item = (Sample, Sample);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let res = self.buffer.get(self.index).cloned();
+        let res = self.buffer.get(self.index).copied();
         self.index += 1;
         res
     }
