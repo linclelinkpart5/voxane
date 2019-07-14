@@ -1,7 +1,6 @@
 //! Reads audio data in-transit and pushes samples into a buffer.
 
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread::Builder as ThreadBuilder;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering as AtomicOrdering;
@@ -15,26 +14,23 @@ use cpal::traits::HostTrait;
 // use cpal::traits::DeviceTrait;
 use cpal::traits::EventLoopTrait;
 
-use crate::sample::SampleSink;
 use crate::sample::SampleBuffer;
 
 const NUM_CHANNELS: u16 = 2;
 
 pub struct Listener {
-    sample_sink: SampleSink,
-    sample_rate: usize,
-    read_size: usize,
+    sample_buffer: SampleBuffer,
     is_running: Arc<AtomicBool>,
 }
 
 impl Listener {
     pub fn start(sample_rate: usize, buffer_len: usize, read_size: usize) -> Self {
-        let sample_sink = Arc::new(Mutex::from(SampleBuffer::new(buffer_len)));
+        let sample_buffer = SampleBuffer::new(buffer_len);
         let is_running = Arc::new(AtomicBool::from(true));
 
         // Scope for thread spawning.
         {
-            let sample_sink = sample_sink.clone();
+            let mut sample_buffer = sample_buffer.clone();
             let is_running = is_running.clone();
 
             // This is a smaller buffer for shuttling data,
@@ -71,7 +67,6 @@ impl Listener {
                             StreamData::Input { buffer: UnknownTypeInputBuffer::F32(buffer) } => {
                                 // println!("CPAL buffer size: {}", buffer.len());
                                 for chunk in buffer.chunks(transport_buffer.len()) {
-                                    let mut sample_buffer = sample_sink.lock().unwrap();
                                     sample_buffer.push_interleaved(&chunk);
                                 }
                             },
@@ -85,9 +80,7 @@ impl Listener {
         }
 
         Self {
-            sample_sink,
-            sample_rate,
-            read_size,
+            sample_buffer,
             is_running,
         }
     }
@@ -96,8 +89,8 @@ impl Listener {
         self.is_running.store(false, AtomicOrdering::Relaxed);
     }
 
-    pub fn sample_sink<'a>(&'a self) -> &'a SampleSink {
-        &self.sample_sink
+    pub fn sample_buffer<'a>(&'a self) -> &'a SampleBuffer {
+        &self.sample_buffer
     }
 }
 
@@ -117,9 +110,7 @@ mod tests {
 
         listener.stop();
 
-        let sample_sink = listener.sample_sink();
-
-        let sample_buffer = sample_sink.lock().unwrap();
+        let sample_buffer = listener.sample_buffer();
 
         for (l_sample, r_sample) in sample_buffer.iter().take(16) {
             println!("({}, {})", l_sample, r_sample);
