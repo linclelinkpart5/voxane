@@ -3,6 +3,7 @@ use std::sync::Arc;
 use rustfft::FFT;
 use rustfft::FFTplanner;
 use rustfft::num_complex::Complex;
+use rustfft::num_traits::Zero;
 
 use crate::Error;
 use crate::sample::Sample;
@@ -16,6 +17,12 @@ pub struct Analyzer {
 
     // FFT window to use for smoothing.
     window: Vec<f32>,
+
+    // Intermediate FFT buffers.
+    input: Vec<Complex<Sample>>,
+    output: Vec<Complex<Sample>>,
+
+    spectrum: Vec<SignalStrength>,
 }
 
 impl Analyzer {
@@ -24,7 +31,18 @@ impl Analyzer {
 
         let window = window_kind.generate(len).into_iter().map(|w| w as f32).collect();
 
-        Analyzer { fft, window, }
+        let input = vec![Complex::zero(); len];
+        let output = vec![Complex::zero(); len];
+
+        let spectrum = vec![0.0; len];
+
+        Analyzer {
+            fft,
+            window,
+            input,
+            output,
+            spectrum,
+        }
     }
 
     #[inline]
@@ -33,29 +51,21 @@ impl Analyzer {
     }
 
     /// Analyzes a sample buffer, representing a buffer of audio data for one channel.
-    pub fn analyze(&self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+    pub fn analyze(&mut self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
         // Check to see if the number of samples is correct.
         if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
 
-        let mut fft_input_buffer =
-            samples
-            .iter()
-            .zip(&self.window)
-            .map(|(s, w)| Complex::new(s * w, 0.0))
-            .collect::<Vec<_>>()
-        ;
-        let mut fft_output_buffer = vec![Complex::from(0.0); self.len()];
+        for (i, (x, w)) in self.input.iter_mut().zip(samples.iter().zip(&self.window)) {
+            *i = Complex::new(x * w, 0.0);
+        }
 
-        self.fft.process(fft_input_buffer.as_mut_slice(), fft_output_buffer.as_mut_slice());
+        self.fft.process(&mut self.input, &mut self.output);
 
-        let res =
-            fft_output_buffer
-                .into_iter()
-                .map(|o| o.norm_sqr())
-                .collect()
-        ;
+        for (s, o) in self.spectrum.iter_mut().zip(&self.output) {
+            *s = o.norm_sqr();
+        }
 
-        Ok(res)
+        Ok(self.spectrum.clone())
     }
 }
 
@@ -73,7 +83,7 @@ mod tests {
     fn test_analyze() {
         const FFT_LEN: usize = 16;
 
-        let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
+        let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
@@ -117,7 +127,7 @@ mod tests {
     fn test_analyze_large_window() {
         const FFT_LEN: usize = 2048;
 
-        let analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
+        let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 

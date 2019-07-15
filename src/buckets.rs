@@ -177,7 +177,7 @@ mod tests {
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, 1024);
 
-        let analyzer = Analyzer::new(1024, WindowKind::default());
+        let mut analyzer = Analyzer::new(1024, WindowKind::default());
 
         let spectrum = analyzer.analyze(&samples).unwrap();
 

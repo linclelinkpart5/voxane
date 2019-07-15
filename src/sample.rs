@@ -8,6 +8,9 @@ use crate::types::SignalStrength;
 
 pub type Sample = f32;
 
+pub struct MonoSampleBuffer(Arc<Mutex<VecDeque<Sample>>>);
+pub struct StereoSampleBuffer(Arc<Mutex<VecDeque<(Sample, Sample)>>>);
+
 #[derive(Clone)]
 pub struct SampleBuffer(Arc<Mutex<VecDeque<(Sample, Sample)>>>);
 
@@ -124,6 +127,17 @@ impl Iterator for SampleBufferIter<'_> {
         let res = self.buffer.get(self.index).copied();
         self.index += 1;
         res
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let n = self.len();
+        (n, Some(n))
+    }
+}
+
+impl ExactSizeIterator for SampleBufferIter<'_> {
+    fn len(&self) -> usize {
+        self.buffer.len().checked_sub(self.index).unwrap_or(0)
     }
 }
 
