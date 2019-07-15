@@ -1,6 +1,7 @@
 use crate::Error;
 use crate::types::SignalStrength;
 use crate::types::Frequency;
+use crate::sample::SampleBuffer;
 use crate::analyzer::Analyzer;
 use crate::window_kind::WindowKind;
 
@@ -27,7 +28,7 @@ impl Detector {
         lower_cutoff: usize,
         upper_cutoff: usize,
         fft_len: usize,
-        ) -> Result<(), Error>
+        ) -> Result<Self, Error>
     {
         if !(decay_factor > 0) { Err(Error::DecayFactor)? }
         if !(trigger_factor > 0) { Err(Error::TriggerFactor)? }
@@ -49,6 +50,26 @@ impl Detector {
 
         let analyzer = Analyzer::new(fft_len, WindowKind::Blackman);
 
-        Ok(())
+        Ok(Self {
+            decay,
+            trigger,
+            lower_cutoff,
+            upper_cutoff,
+            volume,
+            delta,
+            beat_delta,
+            peak,
+            valley,
+            analyzer,
+        })
+    }
+
+    pub fn volume(&self) -> SignalStrength {
+        self.volume
+    }
+
+    pub fn is_beat(&mut self, samples: &SampleBuffer) -> bool {
+        // self.analyzer.analyze(samples);
+        false
     }
 }
