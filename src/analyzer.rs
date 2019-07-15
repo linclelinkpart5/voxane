@@ -51,7 +51,7 @@ impl Analyzer {
     }
 
     /// Analyzes a sample buffer, representing a buffer of audio data for one channel.
-    pub fn analyze(&mut self, samples: &[Sample]) -> Result<Vec<SignalStrength>, Error> {
+    pub fn analyze(&mut self, samples: &[Sample]) -> Result<&[SignalStrength], Error> {
         // Check to see if the number of samples is correct.
         if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
 
@@ -65,7 +65,7 @@ impl Analyzer {
             *s = o.norm_sqr();
         }
 
-        Ok(self.spectrum.clone())
+        Ok(&self.spectrum)
     }
 }
 
@@ -87,7 +87,7 @@ mod tests {
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
-        let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
+        let spectrum = analyzer.analyze(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 
@@ -110,7 +110,7 @@ mod tests {
             0.31955782,
         ];
 
-        for (e, ss) in expected.into_iter().zip(&spectrum) {
+        for (e, ss) in expected.into_iter().zip(spectrum) {
             assert_approx_eq!(e, ss);
         }
 
@@ -131,7 +131,7 @@ mod tests {
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
-        let spectrum: Vec<SignalStrength> = analyzer.analyze(&samples).unwrap();
+        let spectrum = analyzer.analyze(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 
