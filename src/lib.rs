@@ -22,6 +22,7 @@ pub enum Error {
     SamplingRate(usize),
     DecayFactor,
     TriggerFactor,
+    TooFewSamples(usize, usize),
 }
 
 impl std::fmt::Display for Error {
@@ -37,6 +38,7 @@ impl std::fmt::Display for Error {
             Error::SamplingRate(s) => write!(f, "sampling rate must be greater than zero and finite {{ found: {} }}", s),
             Error::DecayFactor => write!(f, "decay factor must be greater than zero"),
             Error::TriggerFactor => write!(f, "trigger factor must be greater than zero"),
+            Error::TooFewSamples(e, p) => write!(f, "too few samples in buffer {{ expected: {}, produced: {} }}", e, p),
         }
     }
 }

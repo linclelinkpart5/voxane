@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use std::sync::MutexGuard;
 use std::collections::VecDeque;
 
+use crate::Error;
 use crate::types::SignalStrength;
 
 pub type Sample = f32;
@@ -48,44 +49,32 @@ impl SampleBuffer {
         }
     }
 
-    /// Return an iterator over the samples in this buffer.
-    pub fn iter<'a>(&'a self) -> SampleBufferIter<'a> {
+    fn iter_starting_at<'a>(&'a self, n: usize) -> SampleBufferIter<'a> {
         let buffer = self.0.lock().unwrap();
 
         SampleBufferIter {
             buffer,
-            index: 0,
+            index: n,
         }
+    }
+
+    /// Return an iterator over the samples in this buffer.
+    pub fn iter<'a>(&'a self) -> SampleBufferIter<'a> {
+        self.iter_starting_at(0)
     }
 
     /// Return an iterator over the last N samples in this buffer.
-    pub fn tail<'a>(&'a self, n: usize) -> SampleBufferIter<'a> {
+    pub fn iter_tail<'a>(&'a self, n: usize) -> Result<SampleBufferIter<'a>, Error> {
         let buffer = self.0.lock().unwrap();
-        let start_index = buffer.len().checked_sub(n).unwrap_or(0);
 
-        SampleBufferIter {
+        if buffer.len() < n { Err(Error::TooFewSamples(n, buffer.len()))? }
+
+        let start_index = buffer.len() - n;
+
+        Ok(SampleBufferIter {
             buffer,
             index: start_index,
-        }
-    }
-
-    /// Calculates the RMS of the sample buffer.
-    pub fn rms(&self) -> SignalStrength {
-        // Taken from http://replaygain.hydrogenaud.io/proposal/rms_energy.html
-        let len = self.len();
-        if len == 0 { return 0.0 }
-
-        let s_pair =
-            self
-            .iter()
-            .map(|(l, r)| (l.powi(2), r.powi(2)))
-            .fold((0.0, 0.0), |(al, ar), (l, r)| (al + l, ar + r))
-        ;
-
-        let n = len as SignalStrength;
-        let ms_pair = (s_pair.0 / n, s_pair.1 / n);
-
-        ((ms_pair.0 + ms_pair.1) / 2.0).sqrt()
+        })
     }
 }
 
@@ -107,6 +96,27 @@ pub struct SampleBufferIter<'a> {
     index: usize,
 }
 
+impl<'a> SampleBufferIter<'a> {
+    /// Calculates the RMS of the samples in this iterator.
+    pub fn rms(mut self) -> SignalStrength {
+        match self.next() {
+            None => 0.0,
+            Some((il, ir)) => {
+                let initial_state = (il.powi(2), ir.powi(2), 1);
+                let (sl, sr, n) =
+                    self
+                    .map(|(l, r)| (l.powi(2), r.powi(2)))
+                    .fold(initial_state, |(al, ar, c), (l, r)| (al + l, ar + r, c + 1))
+                ;
+
+                let (msl, msr) = (sl / n as SignalStrength, sr / n as SignalStrength);
+
+                ((msl + msr) / 2.0).sqrt()
+            }
+        }
+    }
+}
+
 impl Iterator for SampleBufferIter<'_> {
     type Item = (Sample, Sample);
 
@@ -124,7 +134,7 @@ mod tests {
     use crate::test_util::TestUtil as TU;
 
     #[test]
-    fn test_root_mean_sqr() {
+    fn test_rms() {
         let inputs_and_expected = vec![
             (SampleBuffer::from(vec![0.0; 16]), 0.0),
             (SampleBuffer::from(vec![1.0; 16]), 1.0),
@@ -132,7 +142,7 @@ mod tests {
         ];
 
         for (input, expected) in inputs_and_expected {
-            let produced = input.rms();
+            let produced = input.iter().rms();
             println!("{}, {}", expected, produced);
             assert_approx_eq!(expected, produced);
         }
