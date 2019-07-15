@@ -48,13 +48,24 @@ impl SampleBuffer {
         }
     }
 
-    /// Return an iterator over the stereo samples in this buffer.
+    /// Return an iterator over the samples in this buffer.
     pub fn iter<'a>(&'a self) -> SampleBufferIter<'a> {
         let buffer = self.0.lock().unwrap();
 
         SampleBufferIter {
             buffer,
             index: 0,
+        }
+    }
+
+    /// Return an iterator over the last N samples in this buffer.
+    pub fn tail<'a>(&'a self, n: usize) -> SampleBufferIter<'a> {
+        let buffer = self.0.lock().unwrap();
+        let start_index = buffer.len().checked_sub(n).unwrap_or(0);
+
+        SampleBufferIter {
+            buffer,
+            index: start_index,
         }
     }
 

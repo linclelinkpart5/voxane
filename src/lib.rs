@@ -7,6 +7,7 @@ pub mod window_kind;
 pub mod wave;
 pub mod sample;
 pub mod listener;
+pub mod beat;
 #[cfg(test)] pub mod test_util;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -19,6 +20,8 @@ pub enum Error {
     OutputBuffer(usize, usize),
     NumSamples(usize, usize),
     SamplingRate(usize),
+    DecayFactor,
+    TriggerFactor,
 }
 
 impl std::fmt::Display for Error {
@@ -32,6 +35,8 @@ impl std::fmt::Display for Error {
             Error::OutputBuffer(e, p) => write!(f, "unexpected output buffer size {{ expected: {}, produced: {} }}", e, p),
             Error::NumSamples(e, p) => write!(f, "unexpected number of samples {{ expected: {}, produced: {} }}", e, p),
             Error::SamplingRate(s) => write!(f, "sampling rate must be greater than zero and finite {{ found: {} }}", s),
+            Error::DecayFactor => write!(f, "decay factor must be greater than zero"),
+            Error::TriggerFactor => write!(f, "trigger factor must be greater than zero"),
         }
     }
 }
