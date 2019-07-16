@@ -35,7 +35,8 @@ impl Listener {
 
             // This is a smaller buffer for shuttling data,
             // in order to keep the sample sink from being locked for too long.
-            let transport_buffer = vec![0.0; read_size * NUM_CHANNELS as usize];
+            // let transport_buffer = vec![0.0; read_size * NUM_CHANNELS as usize];
+            let transport_size = read_size * NUM_CHANNELS as usize;
 
             ThreadBuilder::new()
                 .spawn(move || {
@@ -66,7 +67,7 @@ impl Listener {
                         match stream_data {
                             StreamData::Input { buffer: UnknownTypeInputBuffer::F32(buffer) } => {
                                 // println!("CPAL buffer size: {}", buffer.len());
-                                for chunk in buffer.chunks(transport_buffer.len()) {
+                                for chunk in buffer.chunks(transport_size) {
                                     sample_buffer.push_interleaved(&chunk);
                                 }
                             },
