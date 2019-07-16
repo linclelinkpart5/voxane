@@ -8,9 +8,6 @@ use crate::types::SignalStrength;
 
 pub type Sample = f32;
 
-pub struct MonoSampleBuffer(Arc<Mutex<VecDeque<Sample>>>);
-pub struct StereoSampleBuffer(Arc<Mutex<VecDeque<(Sample, Sample)>>>);
-
 #[derive(Clone)]
 pub struct SampleBuffer(Arc<Mutex<VecDeque<(Sample, Sample)>>>);
 

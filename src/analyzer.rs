@@ -7,7 +7,6 @@ use rustfft::num_traits::Zero;
 
 use crate::Error;
 use crate::sample::Sample;
-use crate::sample::SampleBufferIter;
 use crate::types::SignalStrength;
 use crate::window_kind::WindowKind;
 
@@ -55,31 +54,6 @@ impl Analyzer {
     #[inline]
     pub fn len(&self) -> usize {
         self.fft.len()
-    }
-
-    /// Analyzes a sample buffer, representing a buffer of audio data.
-    pub fn analyze(&mut self, samples: SampleBufferIter<'_>) -> Result<(&[SignalStrength], &[SignalStrength]), Error> {
-        // Check to see if the number of samples is correct.
-        if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
-
-        for ((il, ir), ((xl, xr), w)) in self.input_l.iter_mut().zip(self.input_r.iter_mut()).zip(samples.zip(&self.window)) {
-            *il = Complex::new(xl * w, 0.0);
-            *ir = Complex::new(xr * w, 0.0);
-        }
-
-        self.fft.process(&mut self.input_l, &mut self.output);
-
-        for (s, o) in self.spectrum_l.iter_mut().zip(&self.output) {
-            *s = o.norm_sqr();
-        }
-
-        self.fft.process(&mut self.input_r, &mut self.output);
-
-        for (s, o) in self.spectrum_r.iter_mut().zip(&self.output) {
-            *s = o.norm_sqr();
-        }
-
-        Ok((&self.spectrum_l, &self.spectrum_r))
     }
 
     /// Analyzes a slice of mono audio samples.
