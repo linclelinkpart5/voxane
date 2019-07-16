@@ -7,6 +7,7 @@ use rustfft::num_traits::Zero;
 
 use crate::Error;
 use crate::sample::Sample;
+use crate::sample::SampleBuffer;
 use crate::types::SignalStrength;
 use crate::window_kind::WindowKind;
 
@@ -56,26 +57,8 @@ impl Analyzer {
         self.fft.len()
     }
 
-    /// Analyzes a slice of mono audio samples.
-    pub fn analyze_mono(&mut self, samples: &[Sample]) -> Result<&[SignalStrength], Error> {
-        // Check to see if the number of samples is correct.
-        if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
-
-        for (ref mut i, (x, w)) in self.input_l.iter_mut().zip(samples.iter().zip(&self.window)) {
-            **i = Complex::new(x * w, 0.0);
-        }
-
-        self.fft.process(&mut self.input_l, &mut self.output);
-
-        for (s, o) in self.spectrum_l.iter_mut().zip(&self.output) {
-            *s = o.norm_sqr();
-        }
-
-        Ok(&self.spectrum_l)
-    }
-
     /// Analyzes a slice of stereo audio samples.
-    pub fn analyze_stereo(&mut self, samples: &[(Sample, Sample)]) -> Result<(&[SignalStrength], &[SignalStrength]), Error> {
+    pub fn analyze(&mut self, samples: &SampleBuffer) -> Result<(&[SignalStrength], &[SignalStrength]), Error> {
         // Check to see if the number of samples is correct.
         if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
 
@@ -116,9 +99,9 @@ mod tests {
 
         let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
-        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
+        let samples = SampleBuffer::from(TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN));
 
-        let spectrum = analyzer.analyze_mono(&samples).unwrap();
+        let (spectrum, _) = analyzer.analyze(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 
@@ -160,9 +143,9 @@ mod tests {
 
         let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
-        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
+        let samples = SampleBuffer::from(TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN));
 
-        let spectrum = analyzer.analyze_mono(&samples).unwrap();
+        let (spectrum, _) = analyzer.analyze(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 

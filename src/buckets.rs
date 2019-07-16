@@ -166,20 +166,22 @@ mod tests {
     }
 
     const SAMPLES_PER_PERIOD: usize = 44100;
+    const FFT_LEN: usize = 1024;
     const FREQUENCY: Frequency = 1000.0;
 
     #[test]
     fn test_bucketize() {
         use crate::analyzer::Analyzer;
         use crate::window_kind::WindowKind;
+        use crate::sample::SampleBuffer;
 
         let buckets = Buckets::new(20.0, 10000.0, 16).unwrap();
 
-        let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, 1024);
+        let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::default());
 
-        let mut analyzer = Analyzer::new(1024, WindowKind::default());
+        let samples = SampleBuffer::from(TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN));
 
-        let spectrum = analyzer.analyze_mono(&samples).unwrap();
+        let (spectrum, _) = analyzer.analyze(&samples).unwrap();
 
         let produced = buckets.bucketize(&spectrum, SAMPLES_PER_PERIOD).unwrap();
 
