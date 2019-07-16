@@ -7,6 +7,7 @@ use rustfft::num_traits::Zero;
 
 use crate::Error;
 use crate::sample::Sample;
+use crate::sample::SampleBufferIter;
 use crate::types::SignalStrength;
 use crate::window_kind::WindowKind;
 
@@ -19,10 +20,12 @@ pub struct Analyzer {
     window: Vec<f32>,
 
     // Intermediate FFT buffers.
-    input: Vec<Complex<Sample>>,
+    input_l: Vec<Complex<Sample>>,
+    input_r: Vec<Complex<Sample>>,
     output: Vec<Complex<Sample>>,
 
-    spectrum: Vec<SignalStrength>,
+    spectrum_l: Vec<SignalStrength>,
+    spectrum_r: Vec<SignalStrength>,
 }
 
 impl Analyzer {
@@ -31,17 +34,21 @@ impl Analyzer {
 
         let window = window_kind.generate(len).into_iter().map(|w| w as f32).collect();
 
-        let input = vec![Complex::zero(); len];
+        let input_l = vec![Complex::zero(); len];
+        let input_r = vec![Complex::zero(); len];
         let output = vec![Complex::zero(); len];
 
-        let spectrum = vec![0.0; len];
+        let spectrum_l = vec![0.0; len];
+        let spectrum_r = vec![0.0; len];
 
         Analyzer {
             fft,
             window,
-            input,
+            input_l,
+            input_r,
             output,
-            spectrum,
+            spectrum_l,
+            spectrum_r,
         }
     }
 
@@ -50,22 +57,72 @@ impl Analyzer {
         self.fft.len()
     }
 
-    /// Analyzes a sample buffer, representing a buffer of audio data for one channel.
-    pub fn analyze(&mut self, samples: &[Sample]) -> Result<&[SignalStrength], Error> {
+    /// Analyzes a sample buffer, representing a buffer of audio data.
+    pub fn analyze(&mut self, samples: SampleBufferIter<'_>) -> Result<(&[SignalStrength], &[SignalStrength]), Error> {
         // Check to see if the number of samples is correct.
         if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
 
-        for (i, (x, w)) in self.input.iter_mut().zip(samples.iter().zip(&self.window)) {
-            *i = Complex::new(x * w, 0.0);
+        for ((il, ir), ((xl, xr), w)) in self.input_l.iter_mut().zip(self.input_r.iter_mut()).zip(samples.zip(&self.window)) {
+            *il = Complex::new(xl * w, 0.0);
+            *ir = Complex::new(xr * w, 0.0);
         }
 
-        self.fft.process(&mut self.input, &mut self.output);
+        self.fft.process(&mut self.input_l, &mut self.output);
 
-        for (s, o) in self.spectrum.iter_mut().zip(&self.output) {
+        for (s, o) in self.spectrum_l.iter_mut().zip(&self.output) {
             *s = o.norm_sqr();
         }
 
-        Ok(&self.spectrum)
+        self.fft.process(&mut self.input_r, &mut self.output);
+
+        for (s, o) in self.spectrum_r.iter_mut().zip(&self.output) {
+            *s = o.norm_sqr();
+        }
+
+        Ok((&self.spectrum_l, &self.spectrum_r))
+    }
+
+    /// Analyzes a slice of mono audio samples.
+    pub fn analyze_mono(&mut self, samples: &[Sample]) -> Result<&[SignalStrength], Error> {
+        // Check to see if the number of samples is correct.
+        if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
+
+        for (ref mut i, (x, w)) in self.input_l.iter_mut().zip(samples.iter().zip(&self.window)) {
+            **i = Complex::new(x * w, 0.0);
+        }
+
+        self.fft.process(&mut self.input_l, &mut self.output);
+
+        for (s, o) in self.spectrum_l.iter_mut().zip(&self.output) {
+            *s = o.norm_sqr();
+        }
+
+        Ok(&self.spectrum_l)
+    }
+
+    /// Analyzes a slice of stereo audio samples.
+    pub fn analyze_stereo(&mut self, samples: &[(Sample, Sample)]) -> Result<(&[SignalStrength], &[SignalStrength]), Error> {
+        // Check to see if the number of samples is correct.
+        if self.len() != samples.len() { Err(Error::NumSamples(self.len(), samples.len()))? }
+
+        for ((ref mut il, ref mut ir), ((xl, xr), w)) in self.input_l.iter_mut().zip(self.input_r.iter_mut()).zip(samples.iter().zip(&self.window)) {
+            **il = Complex::new(xl * w, 0.0);
+            **ir = Complex::new(xr * w, 0.0);
+        }
+
+        self.fft.process(&mut self.input_l, &mut self.output);
+
+        for (s, o) in self.spectrum_l.iter_mut().zip(&self.output) {
+            *s = o.norm_sqr();
+        }
+
+        self.fft.process(&mut self.input_r, &mut self.output);
+
+        for (s, o) in self.spectrum_r.iter_mut().zip(&self.output) {
+            *s = o.norm_sqr();
+        }
+
+        Ok((&self.spectrum_l, &self.spectrum_r))
     }
 }
 
@@ -80,14 +137,14 @@ mod tests {
     const FREQUENCY: Frequency = 440.0;
 
     #[test]
-    fn test_analyze() {
+    fn test_analyze_mono() {
         const FFT_LEN: usize = 16;
 
         let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
-        let spectrum = analyzer.analyze(&samples).unwrap();
+        let spectrum = analyzer.analyze_mono(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 
@@ -124,14 +181,14 @@ mod tests {
     }
 
     #[test]
-    fn test_analyze_large_window() {
+    fn test_analyze_mono_large_window() {
         const FFT_LEN: usize = 2048;
 
         let mut analyzer = Analyzer::new(FFT_LEN, WindowKind::Rectangular);
 
         let samples = TestUtil::generate_wave_samples(SAMPLES_PER_PERIOD, FREQUENCY, FFT_LEN);
 
-        let spectrum = analyzer.analyze(&samples).unwrap();
+        let spectrum = analyzer.analyze_mono(&samples).unwrap();
 
         assert_eq!(FFT_LEN, spectrum.len());
 

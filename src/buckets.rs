@@ -179,7 +179,7 @@ mod tests {
 
         let mut analyzer = Analyzer::new(1024, WindowKind::default());
 
-        let spectrum = analyzer.analyze(&samples).unwrap();
+        let spectrum = analyzer.analyze_mono(&samples).unwrap();
 
         let produced = buckets.bucketize(&spectrum, SAMPLES_PER_PERIOD).unwrap();
 
