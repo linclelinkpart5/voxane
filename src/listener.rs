@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 use std::thread::Builder as ThreadBuilder;
+use std::thread::JoinHandle;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering as AtomicOrdering;
 
@@ -21,6 +22,7 @@ const NUM_CHANNELS: u16 = 2;
 pub struct Listener {
     sample_buffer: SampleBuffer,
     is_running: Arc<AtomicBool>,
+    handle: JoinHandle<()>,
 }
 
 impl Listener {
@@ -29,7 +31,7 @@ impl Listener {
         let is_running = Arc::new(AtomicBool::from(true));
 
         // Scope for thread spawning.
-        {
+        let handle = {
             let mut sample_buffer = sample_buffer.clone();
             let is_running = is_running.clone();
 
@@ -71,18 +73,18 @@ impl Listener {
                                     sample_buffer.push_interleaved(&chunk);
                                 }
                             },
-                            StreamData::Input { .. } => panic!(),
+                            StreamData::Input { .. } => panic!("unrequested format"),
                             StreamData::Output { .. } => {},
                         };
                     });
                 })
                 .unwrap()
-            ;
-        }
+        };
 
         Self {
             sample_buffer,
             is_running,
+            handle,
         }
     }
 

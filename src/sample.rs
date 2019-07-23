@@ -134,7 +134,7 @@ impl Iterator for SampleBufferIter<'_> {
 
 impl ExactSizeIterator for SampleBufferIter<'_> {
     fn len(&self) -> usize {
-        self.buffer.len().checked_sub(self.index).unwrap_or(0)
+        self.buffer.len().saturating_sub(self.index)
     }
 }
 
